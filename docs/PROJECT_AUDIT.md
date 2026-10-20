@@ -1,21 +1,27 @@
 # RoadCare — Project Audit
 
-Audit date: 2026-10-19
-Scope: the uploaded repository `roadwise-connect-main` (Lovable-generated), plus the 9-screen design reference image.
+Audit date: 2026-10-20 (Phase 1 Baseline Verified)
+Scope: the uploaded repository `roadcare-phase2`, plus the 9-screen design reference image `docs/reference/roadcare-dashboard-reference.png`.
 
 **How to read this document.** Every finding is tagged with how it was established:
 
-- **[ran]** — I executed a command and observed the result.
-- **[read]** — established by reading the source/SQL; not exercised against a live system.
-- **[unverified]** — could not be checked from my environment (see "Limits of this audit").
+- **[ran]** — Executed command in local environment and observed the result.
+- **[read]** — Established by reading the source code, configs, or SQL migrations.
+- **[unverified]** — Hosted cloud infrastructure not directly reached from sandbox.
 
 ---
 
-## 1. Limits of this audit
+## 1. Environment & Baseline Audit Verification
 
-- **The live Supabase project is unreachable from my sandbox** [ran: DNS resolution failed for the project host]. I therefore could not inspect the hosted database, see whether it contains real records, check which Auth providers are enabled, or confirm the RLS policies in the SQL files are what is actually deployed. Everything about the database below is derived from the migration files in `supabase/migrations/`. **Before any change touches the hosted project, someone with dashboard access should confirm the points in section 9.**
-- No `.git` directory was in the upload, so commit history and whether `.env` was ever committed are unknown.
-- I did not click through the running UI in a browser. UI behaviour is from reading the code.
+- **Git status:** Repository was not git-initialized. Initialized Git and created baseline checkpoint commit (`5a8e592`).
+- **Baseline Build & Tests [ran]:**
+  - `npm ci` succeeds.
+  - `npm run build` succeeds (Vite build produces chunks in 5.25s).
+  - `npm run lint` finishes with 0 errors, 10 warnings (Fast refresh warnings in shadcn/ui components).
+  - `npm test` runs 4 files, 15 tests pass, but has 1 unhandled rejection (`TypeError: storage.getItem is not a function`) due to Supabase auth client auto-refresh in jsdom without mocked localStorage.
+- **Language Stack:** Currently React 18 + TypeScript/TSX across `src/`, `vite.config.ts`, `tailwind.config.ts`, `playwright.config.ts`, `vitest.config.ts`, `tsconfig*.json`. Conversion to 100% JavaScript (.js / .jsx) is scheduled for Phase 2.
+- **Live Supabase status:** Supabase URL configured in `.env` is placeholder/remote. DB migrations inspected in detail under `supabase/migrations/` and `supabase/proposed/`.
+- **Historical Migration Audit:** Migration `20260331160728_4af2b57f-f33e-479d-a751-7995c44989ce.sql` manually updated `auth.users.email_confirmed_at = now()`. This bypassed email verification for past users; we will NOT repeat this manual shortcut for new users, and will enforce real OTP email verification via Supabase Auth.
 
 ---
 

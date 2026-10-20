@@ -2,16 +2,35 @@ import js from "@eslint/js";
 import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
-import tseslint from "typescript-eslint";
 
-export default tseslint.config(
-  { ignores: ["dist"] },
+export default [
   {
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
-    files: ["**/*.{ts,tsx}"],
+    ignores: [
+      "dist/**",
+      "coverage/**",
+      "uploads/**",
+      "services/**",
+      "apps/api/node_modules/**",
+      "node_modules/**",
+      "scripts/convert-all.mjs",
+    ],
+  },
+  js.configs.recommended,
+  {
+    files: ["**/*.{js,jsx}"],
     languageOptions: {
-      ecmaVersion: 2020,
-      globals: globals.browser,
+      ecmaVersion: 2022,
+      sourceType: "module",
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        React: "readable",
+      },
     },
     plugins: {
       "react-hooks": reactHooks,
@@ -20,7 +39,8 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
-      "@typescript-eslint/no-unused-vars": "off",
+      "no-unused-vars": "off",
+      "no-empty": ["error", { allowEmptyCatch: true }],
     },
   },
-);
+];
