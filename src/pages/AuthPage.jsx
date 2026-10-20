@@ -1,16 +1,16 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, DEMO_ACCOUNTS } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, Mail, Lock, User as UserIcon, ArrowRight } from "lucide-react";
+import { Loader2, Mail, Lock, User as UserIcon, ArrowRight, ShieldCheck, HardHat, Building2, Sparkles } from "lucide-react";
 
 export default function AuthPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user, signIn, signUp, signInWithGoogle, role } = useAuth();
+  const { user, signIn, signUp, signInWithGoogle, quickLogin, role } = useAuth();
 
   const [mode, setMode] = useState(
     searchParams.get("tab") === "signup" ? "signup" : "signin"
@@ -32,6 +32,19 @@ export default function AuthPage() {
       else navigate("/dashboard");
     }
   }, [user, role, navigate]);
+
+  const handleQuickLogin = (roleType) => {
+    try {
+      const demo = DEMO_ACCOUNTS[roleType];
+      quickLogin(roleType);
+      toast.success(`Signed in as ${demo.fullName} (${roleType})!`);
+      if (roleType === "admin") navigate("/admin");
+      else if (roleType === "officer") navigate("/officer");
+      else navigate("/dashboard");
+    } catch {
+      toast.error("Quick login failed");
+    }
+  };
 
   const handleEmailAuth = async (e) => {
     e.preventDefault();
@@ -55,11 +68,11 @@ export default function AuthPage() {
           return;
         }
 
-        const data = await signUp(email, password, fullName);
+        await signUp(email, password, fullName);
         toast.success(
-          "Account created! Please check your email for the verification code."
+          "Account created successfully! Welcome to RoadCare."
         );
-        navigate(`/verify-otp?email=${encodeURIComponent(email)}`);
+        navigate("/dashboard");
       } else {
         await signIn(email, password);
         toast.success("Welcome back!");
@@ -76,6 +89,7 @@ export default function AuthPage() {
     setGoogleLoading(true);
     try {
       await signInWithGoogle();
+      toast.success("Signed in with Google!");
     } catch (err) {
       toast.error(
         err.message || "Google sign-in is not configured or failed to initialize."
@@ -100,16 +114,68 @@ export default function AuthPage() {
         </Link>
 
         {/* Main Auth Form Container */}
-        <div className="max-w-md w-full mx-auto my-10">
-          <div className="text-center sm:text-left mb-8">
+        <div className="max-w-md w-full mx-auto my-8">
+          <div className="text-center sm:text-left mb-6">
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
               {mode === "signin" ? "Welcome Back" : "Create Account"}
             </h1>
             <p className="mt-2 text-sm text-slate-500">
               {mode === "signin"
-                ? "Sign in with your Google account or email to continue"
+                ? "Sign in to access your civic dashboard, issue tracker, and maps"
                 : "Join RoadCare to report road issues and track resolutions"}
             </p>
+          </div>
+
+          {/* Quick 1-Click Demo Login Personas */}
+          <div className="mb-6 p-4 bg-emerald-50/60 border border-emerald-200/80 rounded-2xl">
+            <div className="flex items-center justify-between mb-2.5">
+              <span className="text-xs font-bold text-emerald-900 flex items-center gap-1.5 uppercase tracking-wider">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                1-Click Instant Demo Access
+              </span>
+              <span className="text-[11px] text-emerald-700 font-medium">Ready to test</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleQuickLogin("citizen")}
+                className="h-10 text-xs font-semibold bg-white border-emerald-300 text-slate-800 hover:bg-emerald-100 flex flex-col items-center justify-center py-1 gap-0.5 rounded-xl shadow-2xs"
+              >
+                <span className="flex items-center gap-1 text-emerald-700">
+                  <UserIcon className="w-3.5 h-3.5" />
+                  Citizen
+                </span>
+                <span className="text-[10px] text-slate-500 font-normal">Report & Track</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleQuickLogin("officer")}
+                className="h-10 text-xs font-semibold bg-white border-emerald-300 text-slate-800 hover:bg-emerald-100 flex flex-col items-center justify-center py-1 gap-0.5 rounded-xl shadow-2xs"
+              >
+                <span className="flex items-center gap-1 text-amber-700">
+                  <HardHat className="w-3.5 h-3.5" />
+                  Officer
+                </span>
+                <span className="text-[10px] text-slate-500 font-normal">Tasks & Fixes</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleQuickLogin("admin")}
+                className="h-10 text-xs font-semibold bg-white border-emerald-300 text-slate-800 hover:bg-emerald-100 flex flex-col items-center justify-center py-1 gap-0.5 rounded-xl shadow-2xs"
+              >
+                <span className="flex items-center gap-1 text-indigo-700">
+                  <Building2 className="w-3.5 h-3.5" />
+                  Admin
+                </span>
+                <span className="text-[10px] text-slate-500 font-normal">Analytics & Assign</span>
+              </Button>
+            </div>
           </div>
 
           {/* Google Sign-in Button */}
@@ -146,13 +212,13 @@ export default function AuthPage() {
           </Button>
 
           {/* Divider */}
-          <div className="relative my-6">
+          <div className="relative my-5">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-slate-200" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-white px-3 text-slate-400 font-medium">
-                Or continue with email
+                Or sign in with email
               </span>
             </div>
           </div>
@@ -218,7 +284,9 @@ export default function AuthPage() {
 
             {mode === "signup" && (
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700">Confirm Password</Label>
+                <Label className="text-xs font-semibold text-slate-700">
+                  Confirm Password
+                </Label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                   <Input
@@ -235,65 +303,80 @@ export default function AuthPage() {
 
             <Button
               type="submit"
-              disabled={loading || googleLoading}
-              className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-sm mt-2"
+              disabled={loading}
+              className="w-full h-11 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 mt-2"
             >
               {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              ) : mode === "signin" ? (
-                "Sign In"
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
               ) : (
-                "Create Account"
+                <>
+                  {mode === "signin" ? "Sign In to RoadCare" : "Create Account"}
+                  <ArrowRight className="w-4 h-4" />
+                </>
               )}
             </Button>
           </form>
 
-          {/* Toggle between Sign In and Sign Up */}
-          <div className="mt-6 text-center text-xs text-slate-500 space-y-2">
-            <p>
-              {mode === "signin" ? "Don't have an account? " : "Already have an account? "}
-              <button
-                type="button"
-                onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-                className="font-semibold text-emerald-600 hover:text-emerald-700 underline underline-offset-2 ml-1"
-              >
-                {mode === "signin" ? "Sign up here" : "Sign in here"}
-              </button>
-            </p>
-            <p>
-              Have a 6-digit email OTP?{" "}
-              <Link
-                to="/verify-otp"
-                className="font-medium text-slate-700 hover:text-emerald-600 underline"
-              >
-                Enter code to verify
-              </Link>
-            </p>
+          {/* Toggle Signin / Signup */}
+          <div className="mt-6 text-center">
+            {mode === "signin" ? (
+              <p className="text-sm text-slate-600">
+                Don't have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => setMode("signup")}
+                  className="font-semibold text-emerald-600 hover:text-emerald-700"
+                >
+                  Sign up now
+                </button>
+              </p>
+            ) : (
+              <p className="text-sm text-slate-600">
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => setMode("signin")}
+                  className="font-semibold text-emerald-600 hover:text-emerald-700"
+                >
+                  Sign in
+                </button>
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Footer policy */}
-        <p className="text-center text-xs text-slate-400 max-w-sm mx-auto">
-          By continuing, you agree to our Terms & Privacy Policy.
+        {/* Footer Terms */}
+        <p className="text-xs text-slate-400 text-center">
+          By continuing, you agree to our{" "}
+          <Link to="/terms" className="underline hover:text-slate-600">
+            Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link to="/privacy" className="underline hover:text-slate-600">
+            Privacy Policy
+          </Link>
+          .
         </p>
       </div>
 
-      {/* Right Column: Hero Visual Image matching Screen 2 */}
-      <div className="hidden md:flex w-1/2 relative bg-slate-900 overflow-hidden items-end p-12 lg:p-16">
+      {/* Right Column: Hero Visual matching Screen 2 */}
+      <div className="hidden md:flex md:w-1/2 relative bg-slate-900 overflow-hidden items-end p-12 lg:p-16">
         <img
           src="/images/road-login-hero.jpg"
-          alt="Scenic mountain road"
+          alt="Scenic Mountain Road"
           className="absolute inset-0 w-full h-full object-cover opacity-80"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/30 to-transparent" />
 
-        <div className="relative z-10 text-white space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-semibold backdrop-blur-xs">
-            Infrastructure Platform
+        <div className="relative z-10 text-white max-w-lg space-y-3 animate-fade-in">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30 backdrop-blur-md">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            Civic Infrastructure Management
           </div>
           <h2 className="text-3xl lg:text-4xl font-extrabold tracking-tight leading-tight">
-            Better Roads <br />
-            <span className="text-emerald-400">Brighter Communities</span>
+            Better Roads
+            <br />
+            Brighter Communities
           </h2>
           <p className="text-sm text-slate-300 font-medium tracking-wide">
             Report • Track • Resolve
