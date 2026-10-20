@@ -5,12 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:web": "vite",
+    "dev:api": "node apps/api/src/server.js",
+    "dev:ai": "python services/road-damage-ai/app.py",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:api": "node --test apps/api/tests/**/*.test.js",
+    "test:ai": "python services/road-damage-ai/test_runner.py",
+    "test:all": "vitest run && node --test apps/api/tests/**/*.test.js && python services/road-damage-ai/test_runner.py"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
