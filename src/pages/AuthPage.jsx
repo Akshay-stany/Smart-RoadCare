@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth, DEMO_ACCOUNTS } from "@/hooks/useAuth";
+import RoadCareLogo from "@/components/common/RoadCareLogo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -104,13 +105,8 @@ export default function AuthPage() {
       {/* Left Column: Form & Brand */}
       <div className="w-full md:w-1/2 flex flex-col justify-between p-8 sm:p-12 lg:p-16 bg-white shadow-xs z-10">
         {/* Brand Header */}
-        <Link to="/" className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center text-white font-black text-lg shadow-2xs">
-            A
-          </div>
-          <span className="font-extrabold text-2xl tracking-tight text-slate-900">
-            RoadCare
-          </span>
+        <Link to="/" className="flex items-center">
+          <RoadCareLogo size="md" theme="dark" subtext="Civic Portal" />
         </Link>
 
         {/* Main Auth Form Container */}

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { useEffect, useCallback } from "react";
 
 export const INITIAL_CIVIC_COMPLAINTS = [
@@ -186,19 +186,42 @@ export function useComplaints(userId) {
       queryClient.invalidateQueries({ queryKey: ["complaint-by-id"] });
     };
 
-    window.addEventListener("roadcare-complaint-changed", handleLocalUpdate);
+    const handleStorage = (e) => {
+      if (e.key === LOCAL_COMPLAINTS_KEY) {
+        handleLocalUpdate();
+      }
+    };
 
-    // Also subscribe to Supabase Realtime postgres_changes
-    const channelName = `complaints-rt-${Date.now()}`;
-    const channel = supabase.channel(channelName);
-    channel.on("postgres_changes", { event: "*", schema: "public", table: "complaints" }, () => {
-      queryClient.invalidateQueries({ queryKey: ["complaints"] });
-    });
-    channel.subscribe();
+    window.addEventListener("roadcare-complaint-changed", handleLocalUpdate);
+    window.addEventListener("storage", handleStorage);
+
+    // Only subscribe to Supabase Realtime postgres_changes if Supabase is properly configured
+    let channel = null;
+    if (isSupabaseConfigured()) {
+      try {
+        const uniqueId = Math.random().toString(36).slice(2, 9);
+        const channelName = `complaints-rt-${uniqueId}-${Date.now()}`;
+        channel = supabase
+          .channel(channelName)
+          .on("postgres_changes", { event: "*", schema: "public", table: "complaints" }, () => {
+            handleLocalUpdate();
+          })
+          .subscribe();
+      } catch (err) {
+        console.warn("Supabase Realtime complaints subscription skipped:", err?.message || err);
+      }
+    }
 
     return () => {
       window.removeEventListener("roadcare-complaint-changed", handleLocalUpdate);
-      supabase.removeChannel(channel);
+      window.removeEventListener("storage", handleStorage);
+      if (channel) {
+        try {
+          supabase.removeChannel(channel);
+        } catch {
+          // ignore cleanup errors
+        }
+      }
     };
   }, [queryClient]);
 

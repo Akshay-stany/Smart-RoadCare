@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 
 export const DEMO_ACCOUNTS = {
   citizen: {
@@ -60,6 +60,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const fetchUserData = useCallback(async (userId) => {
+    if (!isSupabaseConfigured() || !userId) return;
     try {
       const [roleRes, profileRes] = await Promise.all([
         supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
@@ -86,9 +87,59 @@ export function AuthProvider({ children }) {
       setRole(local.role || "citizen");
       setProfile(local.profile || { full_name: local.user.user_metadata?.full_name || local.user.email });
       setLoading(false);
+    } else {
+      if (!isSupabaseConfigured()) {
+        // In local/demo mode without active session, start with demo citizen so app is immediately usable
+        const demo = DEMO_ACCOUNTS.citizen;
+        const mockUser = {
+          id: demo.id,
+          email: demo.email,
+          email_confirmed_at: demo.emailConfirmedAt,
+          created_at: new Date().toISOString(),
+          user_metadata: { full_name: demo.fullName },
+        };
+        const sessionObj = {
+          user: mockUser,
+          session: { access_token: "mock-jwt-" + Date.now(), user: mockUser },
+          role: demo.role,
+          profile: { id: demo.id, user_id: demo.id, full_name: demo.fullName, email: demo.email, role: demo.role },
+        };
+        storeLocalSession(sessionObj);
+        setUser(mockUser);
+        setSession(sessionObj.session);
+        setRole(demo.role);
+        setProfile(sessionObj.profile);
+        setLoading(false);
+      }
     }
 
-    // 2. Subscribe to Supabase auth events
+    // Storage event for multi-tab sync
+    const handleStorageChange = (e) => {
+      if (e.key === LOCAL_SESSION_KEY) {
+        const updated = getStoredLocalSession();
+        if (updated?.user) {
+          setUser(updated.user);
+          setSession(updated.session || { user: updated.user });
+          setRole(updated.role || "citizen");
+          setProfile(updated.profile || null);
+        } else {
+          setUser(null);
+          setSession(null);
+          setRole(null);
+          setProfile(null);
+        }
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+
+    // 2. Only subscribe to Supabase auth events if cloud is genuinely configured
+    if (!isSupabaseConfigured()) {
+      setLoading(false);
+      return () => {
+        window.removeEventListener("storage", handleStorageChange);
+      };
+    }
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
@@ -105,7 +156,6 @@ export function AuthProvider({ children }) {
       setLoading(false);
     });
 
-    // 3. Check Supabase cloud session
     supabase.auth
       .getSession()
       .then(async ({ data: { session: initialSession } }) => {
@@ -115,14 +165,15 @@ export function AuthProvider({ children }) {
           await fetchUserData(initialSession.user.id);
         }
       })
-      .catch(() => {
-        // Cloud Supabase not reachable; retain local session
-      })
+      .catch(() => {})
       .finally(() => {
         setLoading(false);
       });
 
-    return () => subscription?.unsubscribe();
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      subscription?.unsubscribe();
+    };
   }, [fetchUserData]);
 
   const setLocalSessionState = (mockUser, mockRole, mockName) => {
@@ -146,6 +197,8 @@ export function AuthProvider({ children }) {
     setSession(sessionObj.session);
     setRole(mockRole);
     setProfile(sessionObj.profile);
+    setLoading(false);
+    window.dispatchEvent(new CustomEvent("roadcare-auth-changed", { detail: sessionObj }));
     return sessionObj;
   };
 

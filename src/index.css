@@ -125,6 +125,79 @@
   height: 100%;
   width: 100%;
   border-radius: var(--radius);
+  z-index: 1 !important;
+  isolation: isolate;
+}
+
+/* Ensure Leaflet controls stay within leaflet bounds */
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 500 !important;
+}
+
+/* Map marker animations & styling */
+@keyframes roadcare-marker-pulse {
+  0% { transform: scale(0.95); opacity: 0.85; }
+  70% { transform: scale(1.35); opacity: 0; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+.roadcare-marker-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.roadcare-marker {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+}
+
+.roadcare-marker__pulse {
+  position: absolute;
+  inset: 2px;
+  border-radius: 9999px;
+  animation: roadcare-marker-pulse 1.8s ease-out infinite;
+}
+
+.roadcare-marker__core {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  border: 2.5px solid #fff;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25), 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.roadcare-cluster-wrap {
+  background: transparent !important;
+  border: none !important;
+}
+
+.roadcare-cluster {
+  width: 44px;
+  height: 44px;
+  border-radius: 9999px;
+  border: 2.5px solid #fff;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32);
+}
+
+.roadcare-pin-marker {
+  background: transparent !important;
+  border: none !important;
 }
 
 /* Custom scrollbars */

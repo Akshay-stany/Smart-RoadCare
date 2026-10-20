@@ -1,8 +1,8 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import NotificationBell from "@/components/NotificationBell";
-import { Menu, User, LogOut } from "lucide-react";
+import { Menu, User, LogOut, Bell, Shield, HardHat, Check } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +13,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function TopBar({ onMenuClick }) {
-  const { user, role, signOut } = useAuth();
+  const { user, role, signOut, quickLogin } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSwitchRole = (newRole) => {
+    quickLogin(newRole);
+    if (newRole === "admin") navigate("/admin");
+    else if (newRole === "officer") navigate("/officer");
+    else navigate("/dashboard");
+  };
 
   const getRoleBadge = () => {
     switch (role) {
@@ -75,7 +83,7 @@ export default function TopBar({ onMenuClick }) {
               </span>
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
                 <p className="text-xs font-semibold text-slate-900 leading-none">
@@ -89,16 +97,46 @@ export default function TopBar({ onMenuClick }) {
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link to="/profile" className="cursor-pointer">
-                <User className="w-4 h-4 mr-2" />
+                <User className="w-4 h-4 mr-2 text-slate-500" />
                 Profile Details
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link to="/notifications" className="cursor-pointer">
-                <span className="w-4 h-4 mr-2 inline-flex items-center justify-center">🔔</span>
+                <Bell className="w-4 h-4 mr-2 text-slate-500" />
                 Notifications
               </Link>
             </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="text-[10px] text-slate-400 uppercase tracking-wider font-bold py-1">
+              Switch Persona
+            </DropdownMenuLabel>
+            <DropdownMenuItem
+              onClick={() => handleSwitchRole("citizen")}
+              className={`cursor-pointer text-xs ${role === "citizen" ? "bg-emerald-50 text-emerald-800 font-semibold" : ""}`}
+            >
+              <User className="w-3.5 h-3.5 mr-2 text-emerald-600" />
+              Citizen View
+              {role === "citizen" && <Check className="w-3.5 h-3.5 ml-auto text-emerald-600" />}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => handleSwitchRole("officer")}
+              className={`cursor-pointer text-xs ${role === "officer" ? "bg-sky-50 text-sky-800 font-semibold" : ""}`}
+            >
+              <HardHat className="w-3.5 h-3.5 mr-2 text-sky-600" />
+              Field Officer View
+              {role === "officer" && <Check className="w-3.5 h-3.5 ml-auto text-sky-600" />}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => handleSwitchRole("admin")}
+              className={`cursor-pointer text-xs ${role === "admin" ? "bg-purple-50 text-purple-800 font-semibold" : ""}`}
+            >
+              <Shield className="w-3.5 h-3.5 mr-2 text-purple-600" />
+              Municipal Admin View
+              {role === "admin" && <Check className="w-3.5 h-3.5 ml-auto text-purple-600" />}
+            </DropdownMenuItem>
+
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => signOut()}

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { useEffect } from "react";
+
 export function useNotifications(userId) {
     const queryClient = useQueryClient();
     const query = useQuery({
@@ -8,35 +9,65 @@ export function useNotifications(userId) {
         queryFn: async () => {
             if (!userId)
                 return [];
-            const { data, error } = await supabase
-                .from("notifications")
-                .select("*")
-                .eq("user_id", userId)
-                .order("created_at", { ascending: false })
-                .limit(50);
-            if (error)
-                throw error;
-            return data;
+            try {
+                const { data, error } = await supabase
+                    .from("notifications")
+                    .select("*")
+                    .eq("user_id", userId)
+                    .order("created_at", { ascending: false })
+                    .limit(50);
+                if (!error && data)
+                    return data;
+            } catch {
+                // fall back to empty or local
+            }
+            return [];
         },
         enabled: !!userId,
     });
+
     // Real-time subscription for new notifications
     useEffect(() => {
         if (!userId)
             return;
-        const channelName = `notifications-${userId}-${Date.now()}`;
-        const channel = supabase
-            .channel(channelName)
-            .on("postgres_changes", {
-            event: "INSERT",
-            schema: "public",
-            table: "notifications",
-            filter: `user_id=eq.${userId}`,
-        }, () => {
+
+        const handleLocalNotify = () => {
             queryClient.invalidateQueries({ queryKey: ["notifications", userId] });
-        })
-            .subscribe();
-        return () => { supabase.removeChannel(channel); };
+        };
+
+        window.addEventListener("roadcare-notification-changed", handleLocalNotify);
+
+        let channel = null;
+        if (isSupabaseConfigured()) {
+            try {
+                const uniqueId = Math.random().toString(36).slice(2, 9);
+                const channelName = `notifications-${userId}-${uniqueId}-${Date.now()}`;
+                channel = supabase
+                    .channel(channelName)
+                    .on("postgres_changes", {
+                        event: "INSERT",
+                        schema: "public",
+                        table: "notifications",
+                        filter: `user_id=eq.${userId}`,
+                    }, () => {
+                        handleLocalNotify();
+                    })
+                    .subscribe();
+            } catch (err) {
+                console.warn("Notifications realtime subscription skipped:", err?.message || err);
+            }
+        }
+
+        return () => {
+            window.removeEventListener("roadcare-notification-changed", handleLocalNotify);
+            if (channel) {
+                try {
+                    supabase.removeChannel(channel);
+                } catch {
+                    // ignore cleanup errors
+                }
+            }
+        };
     }, [userId, queryClient]);
     return query;
 }

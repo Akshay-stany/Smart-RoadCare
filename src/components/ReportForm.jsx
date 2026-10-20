@@ -344,7 +344,7 @@ export default function ReportForm({ onSuccess }) {
               </div>
 
               {/* Embedded Mobile Geomap Container */}
-              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs relative">
+              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs relative z-0">
                 <div className="h-[210px] w-full">
                   <MapView
                     complaints={[]}

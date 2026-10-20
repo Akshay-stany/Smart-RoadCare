@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import RoadCareLogo from "@/components/common/RoadCareLogo";
 import {
   LayoutDashboard,
   AlertCircle,
@@ -73,22 +74,18 @@ export default function Sidebar({ className = "" }) {
       className={`w-64 bg-[#0B1328] text-white flex flex-col shrink-0 h-screen sticky top-0 border-r border-slate-800/60 ${className}`}
     >
       {/* Brand Header */}
-      <div className="h-16 flex items-center px-6 gap-3 border-b border-slate-800/80">
-        <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-white font-black text-lg shadow-sm">
-          A
-        </div>
-        <div className="flex flex-col">
-          <span className="font-bold text-base tracking-tight text-white flex items-center gap-1.5">
-            RoadCare
-          </span>
-          <span className="text-[10px] text-emerald-400 font-medium tracking-wider uppercase">
-            {role === "admin"
+      <div className="h-16 flex items-center px-5 gap-3 border-b border-slate-800/80">
+        <RoadCareLogo
+          size="sm"
+          theme="light"
+          subtext={
+            role === "admin"
               ? "Admin Console"
               : role === "officer"
               ? "Officer Portal"
-              : "Civic Portal"}
-          </span>
-        </div>
+              : "Civic Portal"
+          }
+        />
       </div>
 
       {/* Navigation Links */}

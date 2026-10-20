@@ -66,6 +66,9 @@ function ensureMapStyles() {
   `;
     document.head.appendChild(style);
 }
+if (typeof window !== "undefined") {
+    ensureMapStyles();
+}
 const createMarkerIcon = (status) => {
     const color = statusColors[status] || "#6b7280";
     const shortLabel = statusShortLabels[status] || "•";
@@ -129,8 +132,8 @@ function createClusterIcon(cluster) {
 const BANGALORE_CENTER = [12.9716, 77.5946];
 const TILE_LAYERS = {
     street: {
-        url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     },
     streetFallback: {
         url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -363,7 +366,7 @@ export default function MapView({ complaints, center = [20.5937, 78.9629], zoom 
         layersRef.current.street = L.tileLayer(TILE_LAYERS.street.url, {
             attribution: TILE_LAYERS.street.attribution,
             maxZoom: 19,
-            subdomains: "abcd",
+            subdomains: "abc",
         });
         layersRef.current.streetFallback = L.tileLayer(TILE_LAYERS.streetFallback.url, {
             attribution: TILE_LAYERS.streetFallback.attribution,
@@ -502,18 +505,32 @@ export default function MapView({ complaints, center = [20.5937, 78.9629], zoom 
             selectedMarkerRef.current.remove();
             selectedMarkerRef.current = null;
         }
-        if (selectedPosition) {
+        if (selectedPosition && Array.isArray(selectedPosition) && selectedPosition.length === 2 && Number.isFinite(selectedPosition[0]) && Number.isFinite(selectedPosition[1])) {
             selectedMarkerRef.current = L.marker(selectedPosition, {
                 icon: L.divIcon({
-                    className: "",
-                    html: `<div style="background:hsl(220,70%,25%);width:22px;height:22px;border-radius:50%;border:3px solid white;box-shadow:0 2px 10px rgba(0,0,0,0.4)"></div>`,
-                    iconSize: [22, 22],
-                    iconAnchor: [11, 11],
+                    className: "roadcare-pin-marker",
+                    html: `<div style="position:relative;width:36px;height:46px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.45));cursor:grab">
+                      <svg width="36" height="46" viewBox="0 0 36 46" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18 0C8.05888 0 0 8.05888 0 18C0 31.5 18 46 18 46C18 46 36 31.5 36 18C36 8.05888 27.9411 0 18 0Z" fill="#10B981"/>
+                        <circle cx="18" cy="18" r="8" fill="#FFFFFF"/>
+                        <circle cx="18" cy="18" r="4.5" fill="#047857"/>
+                      </svg>
+                    </div>`,
+                    iconSize: [36, 46],
+                    iconAnchor: [18, 46],
                 }),
+                draggable: Boolean(onMapClick),
             }).addTo(mapInstance.current);
-            mapInstance.current.flyTo(selectedPosition, 15, { duration: 0.75 });
+
+            if (onMapClick) {
+                selectedMarkerRef.current.on("dragend", (e) => {
+                    const latlng = e.target.getLatLng();
+                    onMapClick(latlng.lat, latlng.lng);
+                });
+            }
+            mapInstance.current.flyTo(selectedPosition, Math.max(mapInstance.current.getZoom(), 15), { duration: 0.6 });
         }
-    }, [selectedPosition]);
+    }, [selectedPosition, onMapClick]);
     const handleLocate = useCallback(() => {
         if (!mapInstance.current)
             return;
@@ -596,7 +613,7 @@ export default function MapView({ complaints, center = [20.5937, 78.9629], zoom 
     return (<div className={`relative ${className || "h-[500px] w-full rounded-xl border"}`}>
       <div ref={mapRef} className="h-full w-full rounded-xl"/>
 
-      <div className="absolute top-3 right-3 z-[1000] flex flex-col gap-2">
+      <div className="absolute top-3 right-3 z-[400] flex flex-col gap-2">
         <button onClick={() => setIsSatellite((value) => !value)} className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium shadow-md transition-colors ${isSatellite
             ? "bg-accent text-accent-foreground border-accent"
             : "bg-background/90 text-foreground border-border backdrop-blur-sm hover:bg-accent"}`}>
@@ -609,11 +626,11 @@ export default function MapView({ complaints, center = [20.5937, 78.9629], zoom 
         </button>
       </div>
 
-      {initialLocating && (<div className="absolute top-3 left-3 z-[1000] rounded-lg border border-border bg-background/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-md backdrop-blur-sm">
+      {initialLocating && (<div className="absolute top-3 left-3 z-[400] rounded-lg border border-border bg-background/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-md backdrop-blur-sm">
           Detecting your location...
         </div>)}
 
-      <div className="absolute bottom-3 left-3 z-[1000] rounded-lg bg-background/90 backdrop-blur-sm border border-border px-3 py-2 shadow-md">
+      <div className="absolute bottom-3 left-3 z-[400] rounded-lg bg-background/90 backdrop-blur-sm border border-border px-3 py-2 shadow-md">
         <div className="flex gap-3 text-[11px] font-medium text-foreground">
           <span className="flex items-center gap-1">
             <span className="h-2.5 w-2.5 rounded-full bg-destructive inline-block"/> Pending

@@ -75,7 +75,7 @@ export default function MapPage() {
     <AppShell>
       <div className="flex flex-col h-[calc(100vh-7.5rem)] space-y-3 relative">
         {/* Top Floating Filter & Search Bar matching Screen 5 */}
-        <div className="bg-white p-3 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-wrap items-center justify-between gap-2.5 z-10">
+        <div className="bg-white p-3 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-wrap items-center justify-between gap-2.5 relative z-30">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 mr-1">
               <Filter className="w-3.5 h-3.5 text-emerald-600" />

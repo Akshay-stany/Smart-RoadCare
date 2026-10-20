@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import RoadCareLogo from "@/components/common/RoadCareLogo";
 import {
   Sparkles,
   ArrowRight,
@@ -27,13 +28,8 @@ export default function Index() {
     <div className="min-h-screen bg-white flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
       {/* 1. Top Navbar */}
       <header className="h-20 border-b border-slate-100 px-6 sm:px-12 flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur-md z-40">
-        <Link to="/" className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white font-black text-xl shadow-xs">
-            A
-          </div>
-          <span className="font-extrabold text-2xl tracking-tight text-slate-900">
-            RoadCare
-          </span>
+        <Link to="/" className="flex items-center">
+          <RoadCareLogo size="md" theme="dark" />
         </Link>
 
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
@@ -236,12 +232,7 @@ export default function Index() {
       {/* 4. Footer */}
       <footer className="py-8 border-t border-slate-200 bg-white px-6 sm:px-12 text-center text-xs text-slate-500">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 font-bold text-slate-800">
-            <div className="w-6 h-6 rounded-md bg-emerald-500 flex items-center justify-center text-white text-xs">
-              A
-            </div>
-            RoadCare Platform
-          </div>
+          <RoadCareLogo size="sm" theme="dark" subtext="Civic Infrastructure" />
           <p>© {new Date().getFullYear()} RoadCare. Real-time civic infrastructure workflow.</p>
           <div className="flex items-center gap-6">
             <Link to="/auth" className="hover:text-slate-900">
