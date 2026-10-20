@@ -190,35 +190,31 @@ async function queueReverseGeocode(lat, lng) {
     return geocodingPipeline;
 }
 function buildPopupContent(c, locationName) {
-    const statusLabel = c.status.replace("_", " ");
-    const statusColor = statusColors[c.status] || "#6b7280";
-    const date = new Date(c.created_at).toLocaleDateString("en-IN", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-    });
-    const loc = locationName || c.address || `${c.latitude.toFixed(4)}, ${c.longitude.toFixed(4)}`;
+    const statusLabel = (c.status || "pending").replace(/_/g, " ");
+    const loc = locationName || c.address || `${c.latitude?.toFixed(4)}, ${c.longitude?.toFixed(4)}`;
+    const compId = c.complaint_id || `RC-${c.id?.slice(0, 4) || "1024"}`;
+    const imgUrl = c.image_url || "/images/pothole-defect.jpg";
+
     return `
-    <div style="max-width:280px;font-family:system-ui,sans-serif">
-      ${c.image_url ? `<img src="${c.image_url}" style="width:100%;border-radius:8px;margin-bottom:8px;max-height:160px;object-fit:cover" alt="${c.title}"/>` : ""}
-      <h3 style="margin:0 0 4px;font-size:15px;font-weight:600">${c.title}</h3>
-      <p style="font-size:12px;color:#555;margin:0 0 8px;line-height:1.4">${c.description}</p>
-      <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
-        <span style="
-          display:inline-flex;align-items:center;gap:4px;
-          background:${statusColor}20;color:${statusColor};
-          padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;
-          border:1px solid ${statusColor}40;
-        ">
-          <span style="width:7px;height:7px;border-radius:50%;background:${statusColor}"></span>
-          ${statusLabel}
-        </span>
-        <span style="font-size:11px;color:#888;font-weight:500">${c.priority} priority</span>
+    <div style="width:230px;font-family:system-ui,-apple-system,sans-serif;padding:2px">
+      <div style="width:100%;height:115px;border-radius:10px;overflow:hidden;margin-bottom:10px;background:#0F172A">
+        <img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover" alt="${c.title || 'Road Defect'}"/>
       </div>
-      <div style="font-size:11px;color:#666;border-top:1px solid #eee;padding-top:6px;margin-top:4px">
-        <div style="margin-bottom:2px">📍 ${loc}</div>
-        <div>📅 ${date}</div>
+      <div style="display:flex;align-items:center;justify-between;margin-bottom:4px">
+        <span style="font-weight:800;font-size:13px;color:#0F172A">#${compId}</span>
+        <span style="font-size:11px;font-weight:700;color:#10B981;margin-left:auto">${c.category || 'Pothole'}</span>
       </div>
+      <div style="font-size:11px;color:#64748B;margin-bottom:10px;display:flex;align-items:center;gap:4px">
+        <span>📍</span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${loc}</span>
+      </div>
+      <a href="/complaints/${c.id || compId}" style="
+        display:block;width:100%;text-align:center;background:#10B981;color:#FFFFFF;
+        font-weight:700;font-size:12px;padding:7px 0;border-radius:8px;text-decoration:none;
+        box-shadow:0 1px 2px rgba(0,0,0,0.08);
+      ">
+        View Details
+      </a>
     </div>
   `;
 }

@@ -1,0 +1,13 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="roadcare-green" x1="16" y1="16" x2="112" y2="112" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#10B981"/>
+      <stop offset="1" stop-color="#059669"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="url(#roadcare-green)"/>
+  <!-- Stylized road perspective with dashed lane -->
+  <path d="M38 98L54 36H74L90 98H76L71 78H57L52 98H38Z" fill="#FFFFFF"/>
+  <path d="M61 64H67L64 48L61 64Z" fill="#059669"/>
+  <path d="M64 74V88" stroke="#10B981" stroke-width="4" stroke-linecap="round"/>
+</svg>
