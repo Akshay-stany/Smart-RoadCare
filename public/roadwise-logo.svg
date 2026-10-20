@@ -1,0 +1,13 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="roadwise-gradient" x1="20" y1="16" x2="108" y2="112" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F766E"/>
+      <stop offset="1" stop-color="#1D4ED8"/>
+    </linearGradient>
+  </defs>
+  <rect x="12" y="12" width="104" height="104" rx="24" fill="url(#roadwise-gradient)"/>
+  <path d="M40 32C40 24.268 46.268 18 54 18H74C81.732 18 88 24.268 88 32V46C88 61.2 78.5 74.6 64 82C49.5 74.6 40 61.2 40 46V32Z" fill="#FFFFFF" fill-opacity="0.95"/>
+  <path d="M57 34L53 68" stroke="#0F766E" stroke-width="6" stroke-linecap="round"/>
+  <path d="M72 34L76 68" stroke="#1D4ED8" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="64" cy="78" r="6" fill="#1E293B"/>
+</svg>
