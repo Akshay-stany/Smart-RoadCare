@@ -72,16 +72,22 @@ export default function AdminDashboard() {
     return complaints.filter((c) => c.status === statusFilter);
   }, [complaints, statusFilter]);
 
-  // Extract available years from complaints dataset
+  // Available years: 2000 to 2026 (descending) plus any dataset years
   const availableYears = useMemo(() => {
-    const yearsSet = new Set([new Date().getFullYear().toString()]);
+    const years = [];
+    const maxYear = Math.max(2026, new Date().getFullYear());
+    for (let yr = maxYear; yr >= 2000; yr--) {
+      years.push(yr.toString());
+    }
     complaints.forEach((c) => {
       if (c.created_at) {
         const y = new Date(c.created_at).getFullYear().toString();
-        if (y && !isNaN(y)) yearsSet.add(y);
+        if (y && !isNaN(y) && !years.includes(y)) {
+          years.push(y);
+        }
       }
     });
-    return Array.from(yearsSet).sort((a, b) => b - a);
+    return years.sort((a, b) => Number(b) - Number(a));
   }, [complaints]);
 
   // Calculate real year-wise month-by-month stats
@@ -293,9 +299,9 @@ export default function AdminDashboard() {
                   <SelectTrigger className="h-8 w-28 text-xs font-bold rounded-xl border-slate-200 bg-white">
                     <SelectValue placeholder="Select year" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-60 overflow-y-auto">
                     {availableYears.map((yr) => (
-                      <SelectItem key={yr} value={yr} className="text-xs font-semibold">
+                      <SelectItem key={yr} value={yr} className="text-xs font-semibold cursor-pointer">
                         {yr}
                       </SelectItem>
                     ))}
