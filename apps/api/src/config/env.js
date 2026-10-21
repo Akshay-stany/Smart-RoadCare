@@ -9,5 +9,5 @@ export const config = {
   supabaseUrl: process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://placeholder-project.supabase.co",
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
   supabaseAnonKey: process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "",
-  aiServiceUrl: process.env.AI_SERVICE_URL || "http://localhost:8000",
+  aiServiceUrl: process.env.ROAD_DAMAGE_AI_URL || process.env.AI_SERVICE_URL || "http://localhost:8000",
 };

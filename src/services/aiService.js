@@ -23,8 +23,8 @@ export const CIVIC_CATEGORIES = [
 export async function analyzeRoadImage(imageFileOrBlob) {
   const startTime = performance.now();
 
-  // 1. Try real Express API or FastAPI if available
-  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  // 1. Try real Express API or FastAPI if available (uses Vercel rewrite or Vite proxy when relative)
+  const apiUrl = import.meta.env.VITE_API_URL ?? "";
   try {
     const formData = new FormData();
     formData.append("image", imageFileOrBlob);

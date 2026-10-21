@@ -14,10 +14,14 @@ const upload = multer({
   },
 });
 
+// Use the bound environment variable provided by Vercel's bindings, with fallbacks
+const aiBaseUrl = process.env.ROAD_DAMAGE_AI_URL || config.aiServiceUrl || "http://localhost:8000";
+
 // 1. AI Health / Model Status
 router.get("/status", async (_req, res) => {
   try {
-    const fastApiRes = await fetch(`${config.aiServiceUrl}/health`, { method: "GET" });
+    const healthUrl = new URL("/health", aiBaseUrl);
+    const fastApiRes = await fetch(healthUrl, { method: "GET" });
     if (fastApiRes.ok) {
       const data = await fastApiRes.json();
       return res.json({ success: true, ...data });
@@ -57,7 +61,8 @@ router.post("/analyze-image", upload.single("image"), async (req, res, next) => 
       const blob = new Blob([req.file.buffer], { type: req.file.mimetype });
       formData.append("file", blob, req.file.originalname);
 
-      const aiResponse = await fetch(`${config.aiServiceUrl}/analyze-image`, {
+      const analyzeUrl = new URL("/analyze-image", aiBaseUrl);
+      const aiResponse = await fetch(analyzeUrl, {
         method: "POST",
         body: formData,
       });

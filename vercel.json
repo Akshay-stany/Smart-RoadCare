@@ -1,0 +1,39 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "app": {
+      "root": ".",
+      "framework": "vite"
+    },
+    "api": {
+      "root": "apps/api",
+      "framework": "express",
+      "bindings": [
+        {
+          "type": "service",
+          "service": "road-damage-ai",
+          "format": "url",
+          "env": "ROAD_DAMAGE_AI_URL"
+        }
+      ]
+    },
+    "road-damage-ai": {
+      "root": "services/road-damage-ai",
+      "framework": "fastapi"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "app"
+      }
+    }
+  ]
+}
