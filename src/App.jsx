@@ -12,6 +12,7 @@ import { Loader2 } from "lucide-react";
 // Lazy-loaded application pages
 const Index = lazy(() => import("./pages/Index"));
 const AuthPage = lazy(() => import("./pages/AuthPage"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const VerifyOtpPage = lazy(() => import("./pages/VerifyOtpPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -54,6 +55,7 @@ function AppContent() {
             {/* Public Routes */}
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/verify-otp" element={<VerifyOtpPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/map" element={<MapPage />} />

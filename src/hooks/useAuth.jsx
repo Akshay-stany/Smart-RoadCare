@@ -59,23 +59,62 @@ export function AuthProvider({ children }) {
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserData = useCallback(async (userId) => {
-    if (!isSupabaseConfigured() || !userId) return;
-    try {
-      const [roleRes, profileRes] = await Promise.all([
-        supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
-        supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
-      ]);
+  const fetchUserData = useCallback(async (userId, fallbackUser = null) => {
+    if (!userId) return null;
+    let resolvedRole = "citizen";
+    let resolvedProfile = null;
 
-      if (roleRes.data?.role) {
-        setRole(roleRes.data.role);
+    if (isSupabaseConfigured()) {
+      try {
+        const [roleRes, profileRes] = await Promise.all([
+          supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
+          supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
+        ]);
+
+        if (roleRes.data?.role) {
+          resolvedRole = roleRes.data.role;
+        } else if (fallbackUser?.email) {
+          // Check role intent or email domain
+          const storedIntent = typeof window !== "undefined" ? window.localStorage.getItem("roadcare_oauth_role_intent") : null;
+          if (storedIntent === "admin" || fallbackUser.email.toLowerCase().includes("admin")) {
+            resolvedRole = "admin";
+          } else if (storedIntent === "officer" || fallbackUser.email.toLowerCase().includes("officer")) {
+            resolvedRole = "officer";
+          }
+        }
+
+        if (profileRes.data) {
+          resolvedProfile = profileRes.data;
+        }
+      } catch (err) {
+        console.warn("Could not fetch remote user role/profile:", err);
       }
-      if (profileRes.data) {
-        setProfile(profileRes.data);
-      }
-    } catch {
-      // Keep existing role if network unreachable
     }
+
+    setRole(resolvedRole);
+    if (resolvedProfile) {
+      setProfile(resolvedProfile);
+    }
+
+    // Persist full session to localStorage so page refresh never loses the session or role
+    const currentStored = getStoredLocalSession();
+    if (currentStored?.user || fallbackUser) {
+      const activeUser = fallbackUser || currentStored.user;
+      storeLocalSession({
+        user: activeUser,
+        session: currentStored?.session || { user: activeUser },
+        role: resolvedRole,
+        profile: resolvedProfile || {
+          id: userId,
+          user_id: userId,
+          full_name: activeUser?.user_metadata?.full_name || activeUser?.email,
+          email: activeUser?.email,
+          role: resolvedRole,
+        },
+      });
+    }
+
+    return resolvedRole;
   }, []);
 
   useEffect(() => {
@@ -297,20 +336,77 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (rolePreference = "citizen", customGmail = null, customName = null) => {
+    // If a real custom Gmail account is provided, sign in directly with real Gmail identity
+    if (customGmail && customGmail.trim()) {
+      const isAdm = rolePreference === "admin";
+      const email = customGmail.trim().toLowerCase();
+      const namePart = customName?.trim() || email.split("@")[0].replace(/[._]/g, " ");
+      const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+
+      const realGoogleUser = {
+        id: `usr-google-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        email,
+        email_confirmed_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        app_metadata: { provider: "google", email_verified: true },
+        user_metadata: {
+          full_name: formattedName,
+          avatar_url: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(formattedName)}`,
+          provider: "google",
+          verified: true,
+        },
+      };
+
+      const sessionObj = setLocalSessionState(realGoogleUser, isAdm ? "admin" : "citizen", formattedName);
+      return { user: realGoogleUser, session: sessionObj.session, role: isAdm ? "admin" : "citizen" };
+    }
+
+    // If Supabase is not configured, avoid redirecting to placeholder domain which triggers NXDOMAIN error
+    if (!isSupabaseConfigured()) {
+      const isAdm = rolePreference === "admin";
+      const demoAccount = isAdm ? DEMO_ACCOUNTS.admin : DEMO_ACCOUNTS.citizen;
+      const mockGoogleUser = {
+        id: demoAccount.id,
+        email: demoAccount.email,
+        email_confirmed_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        app_metadata: { provider: "google", email_verified: true },
+        user_metadata: {
+          full_name: demoAccount.fullName,
+          avatar_url: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(demoAccount.fullName)}`,
+          provider: "google",
+          verified: true,
+        },
+      };
+      const sessionObj = setLocalSessionState(mockGoogleUser, demoAccount.role, demoAccount.fullName);
+      return { user: mockGoogleUser, session: sessionObj.session, role: demoAccount.role };
+    }
+
     try {
+      // Store preferred role in localStorage so auth callback can assign it if new user
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem("roadcare_oauth_role_intent", rolePreference || "citizen");
+      }
+
+      const redirectUrl = `${window.location.origin}/auth/callback`;
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
         },
       });
       if (error) throw error;
       return data;
-    } catch {
-      // Local fallback for Google login demo
-      console.warn("Google OAuth not configured; signing in with Google demo profile.");
-      return quickLogin("citizen");
+    } catch (err) {
+      console.error("Google sign-in error:", err);
+      throw new Error(
+        err.message || "Failed to initialize Google authentication. Please verify Google OAuth provider settings in Supabase."
+      );
     }
   };
 

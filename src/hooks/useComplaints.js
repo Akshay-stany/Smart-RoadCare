@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { useEffect, useCallback } from "react";
+import { notifyAdminsNewComplaint, notifyCitizenComplaintUpdated } from "@/hooks/useNotifications";
 
 export const INITIAL_CIVIC_COMPLAINTS = [
   {
@@ -312,10 +313,16 @@ export function useCreateComplaint() {
       const updatedList = [newRecord, ...current];
       saveLocalComplaints(updatedList);
 
+      // Trigger immediate real-time admin notification
+      notifyAdminsNewComplaint(newRecord).catch((err) => {
+        console.warn("Failed to dispatch admin notification:", err);
+      });
+
       return newRecord;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["complaints"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 }
@@ -359,11 +366,18 @@ export function useUpdateComplaintStatus() {
 
       const nextList = all.map((c) => (c.id === target.id ? updated : c));
       saveLocalComplaints(nextList);
+
+      // Trigger immediate real-time citizen notification
+      notifyCitizenComplaintUpdated(updated, updated.status, remarks).catch((err) => {
+        console.warn("Failed to dispatch citizen notification:", err);
+      });
+
       return updated;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["complaints"] });
       queryClient.invalidateQueries({ queryKey: ["complaint-by-id"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 }

@@ -140,27 +140,20 @@ export default function MapPage() {
 
         {/* Full Mobile Geomap Canvas */}
         <div className="relative flex-1 rounded-2xl overflow-hidden border border-slate-200/90 shadow-2xs bg-slate-100">
-          {/* Map Priority Legend matching Screen 5 */}
-          <div className="absolute top-4 right-4 z-[400] bg-white/95 backdrop-blur-md rounded-xl p-3 border border-slate-200/90 shadow-sm text-xs font-semibold space-y-1.5 pointer-events-auto">
+          {/* Status Color Legend matching Requirement 4 */}
+          <div className="absolute top-4 right-4 z-[400] bg-white/95 backdrop-blur-md rounded-xl p-3 border border-slate-200/90 shadow-sm text-xs font-semibold space-y-1.5 pointer-events-auto hidden sm:block">
+            <div className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider mb-1">Status Legend</div>
             <div className="flex items-center gap-2 text-slate-700">
-              <span className="w-2.5 h-2.5 rounded-full bg-red-600" />
-              <span>Critical</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-2xs" />
+              <span>Pending (Yellow)</span>
             </div>
             <div className="flex items-center gap-2 text-slate-700">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-              <span>High</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-2xs" />
+              <span>In Progress (Red)</span>
             </div>
             <div className="flex items-center gap-2 text-slate-700">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-              <span>Medium</span>
-            </div>
-            <div className="flex items-center gap-2 text-slate-700">
-              <span className="w-2.5 h-2.5 rounded-full bg-sky-500" />
-              <span>Low</span>
-            </div>
-            <div className="flex items-center gap-2 text-slate-700">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-              <span>Resolved</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-2xs" />
+              <span>Resolved (Green)</span>
             </div>
           </div>
 

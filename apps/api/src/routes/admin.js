@@ -58,6 +58,33 @@ router.get("/dashboard", async (_req, res, next) => {
   }
 });
 
+// 1b. Registered Users Query
+router.get("/users", async (_req, res, next) => {
+  try {
+    const { data: profiles, error: pErr } = await supabaseAdmin.from("profiles").select("*");
+    if (pErr) throw pErr;
+    const { data: roles, error: rErr } = await supabaseAdmin.from("user_roles").select("*");
+    if (rErr) throw rErr;
+
+    const roleMap = {};
+    (roles || []).forEach((r) => {
+      roleMap[r.user_id] = r.role;
+    });
+
+    const users = (profiles || []).map((p) => ({
+      id: p.user_id || p.id,
+      name: p.full_name || p.email?.split("@")[0] || "User",
+      email: p.email,
+      role: roleMap[p.user_id] || "citizen",
+      createdAt: p.created_at,
+    }));
+
+    res.json({ success: true, users });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // 2. Assign Officer to Complaint
 const AssignOfficerSchema = z.object({
   complaintId: z.string().uuid(),
