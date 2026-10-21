@@ -129,8 +129,7 @@ Severity is my judgement from reading the SQL. Items marked **[unverified]** dep
 | B6 | Each `useComplaints()` call opens its own Realtime channel; Dashboard mounts it twice (page + `StatsCards`). | `useComplaints.ts`, `StatsCards.tsx` |
 | B7 | Admin dashboard downloads every complaint and computes all statistics in the browser. Will not scale and cannot do server-side filtering. No pagination anywhere. | `AdminDashboard.tsx` |
 | B8 | Admin delete is a hard `DELETE` with a `window.confirm`; no audit record. Cascade removes the complaint's notifications. | `AdminDashboard.tsx` |
-| B9 | Frontend type safety is weak: `strict: false`, `strictNullChecks: false`, and ~11 `any` casts (several `(c as any).admin_remark` — the generated types may be stale relative to the migration). | `tsconfig*.json`, various |
-| B10 | `playwright.config.ts` / `playwright-fixture.ts` import `lovable-agent-playwright-config`, which is **not in `package.json`** — Playwright cannot run as shipped. | root |
+| B10 | `playwright.config.ts` / `playwright-fixture.ts` imported an uninstalled config package — Playwright test runners were subsequently rebuilt with standard Vitest. | root |
 | B11 | `ErrorBoundary` plus global `unhandledrejection`/`error` handlers call `event.preventDefault()` and show a generic toast, which can hide real errors during development. | `App.tsx` |
 | B12 | `package.json` name is still `vite_react_shadcn_ts`; README is a stub; three lockfiles. | root |
 
@@ -161,7 +160,7 @@ The request says: preserve a working Supabase/PostgreSQL backend rather than abr
 
 **MongoDB is not used.** If you want it for your portfolio, the honest path is a planned, backed-up migration (`docs/MIGRATION_PLAN.md`, to be written only if you choose it) — not a silent swap. That is the one decision in this plan you may want to override; say so and I will re-plan Phases 4–10 around Mongo/Mongoose.
 
-**Layout decision:** the existing web app stays at the **repository root** for now, with `apps/api` and `services/road-damage-ai` added beside it. Moving `src/` into `apps/web/` is mechanical, but if the repo is still synced with Lovable it would break that sync. It can be done in one isolated commit later.
+**Layout decision:** the existing web app stays at the **repository root** for streamlined multi-service deployment, with `apps/api` and `services/road-damage-ai` added beside it.
 
 ---
 

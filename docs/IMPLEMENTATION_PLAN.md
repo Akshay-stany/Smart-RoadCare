@@ -53,6 +53,5 @@ Defaults: web 8080 (existing; 5173 only if you prefer — Vite config is the sin
 
 ## Open questions for you (non-blocking; defaults chosen)
 
-1. **Database:** default = keep Supabase. Want MongoDB instead? (needs a migration plan.)
-2. **Lovable sync:** default = keep web app at repo root. Is the repo still linked to Lovable?
-3. **Google OAuth:** needs a Google Cloud OAuth client + enabling the provider in Supabase. I can wire the code; I cannot create the credentials.
+1. **Database:** default = keep Supabase PostgreSQL.
+2. **Google OAuth:** configured via Google Cloud OAuth client + provider in Supabase.

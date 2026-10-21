@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Menu, X, LogOut, LayoutDashboard } from "lucide-react";
 import { useState } from "react";
 import NotificationBell from "@/components/NotificationBell";
+import RoadCareLogo from "@/components/common/RoadCareLogo";
 export default function Navbar() {
     const { user, role, signOut } = useAuth();
     const navigate = useNavigate();
@@ -16,9 +17,8 @@ export default function Navbar() {
     const isActive = (path) => location.pathname === path;
     return (<nav className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-md">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link to="/" className="flex items-center gap-2 font-bold text-xl">
-          <img src="/roadwise-logo.svg" alt="RoadWise Connect logo" className="h-9 w-9 rounded-lg"/>
-          <span className="text-foreground">RoadWise Connect</span>
+        <Link to="/" className="flex items-center">
+          <RoadCareLogo size="md" theme="dark" />
         </Link>
 
         {/* Desktop */}
