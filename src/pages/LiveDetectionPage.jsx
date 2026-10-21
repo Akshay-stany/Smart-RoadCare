@@ -362,6 +362,7 @@ export default function LiveDetectionPage() {
           const result = await analyzeRoadImage(blob);
           if (
             result &&
+            result.modelAvailable &&
             result.primaryDefect &&
             result.primaryDefect.confidence >= confidenceThreshold
           ) {

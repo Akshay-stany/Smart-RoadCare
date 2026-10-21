@@ -83,14 +83,6 @@ export default function AuthCallback() {
 
         if (roleRow?.role) {
           assignedRole = roleRow.role;
-        } else {
-          // Check user metadata or email conventions
-          const metaRole = user.user_metadata?.role;
-          if (metaRole === "admin" || user.email?.toLowerCase().includes("admin")) {
-            assignedRole = "admin";
-          } else if (metaRole === "officer" || user.email?.toLowerCase().includes("officer")) {
-            assignedRole = "officer";
-          }
         }
 
         if (fetchUserData) {

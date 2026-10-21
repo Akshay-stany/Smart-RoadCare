@@ -183,10 +183,24 @@ function createMockQueryBuilder(table) {
 }
 
 export const supabaseAdmin = isPlaceholder
-  ? {
-      from: (table) => createMockQueryBuilder(table),
-      auth: {
-        getUser: async () => ({ data: { user: null }, error: new Error("Local mode") }),
-      },
-    }
+  ? (process.env.NODE_ENV === "production"
+      ? {
+          from: () => {
+            throw new Error(
+              "Database service unconfigured in production: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required."
+            );
+          },
+          auth: {
+            getUser: async () => ({
+              data: { user: null },
+              error: new Error("Authentication service unconfigured: Missing production Supabase credentials."),
+            }),
+          },
+        }
+      : {
+          from: (table) => createMockQueryBuilder(table),
+          auth: {
+            getUser: async () => ({ data: { user: null }, error: new Error("Local mode") }),
+          },
+        })
   : realClient;

@@ -137,17 +137,25 @@ export async function notifyAdminsNewComplaint(complaint) {
   const locationStr = complaint.address || `${complaint.latitude?.toFixed(4)}, ${complaint.longitude?.toFixed(4)}`;
   const message = `New Complaint #${compId}: "${complaint.title}" at ${locationStr} submitted at ${timeStr}.`;
 
-  // Notify default admin ID and any stored admin sessions
-  const adminIds = [DEMO_ACCOUNTS.admin.id];
-  try {
-    const rawSession = window.localStorage?.getItem("roadcare_local_session");
-    if (rawSession) {
-      const sess = JSON.parse(rawSession);
-      if (sess.role === "admin" && sess.user?.id && !adminIds.includes(sess.user.id)) {
-        adminIds.push(sess.user.id);
+  const adminIds = [];
+  if (isSupabaseConfigured()) {
+    try {
+      const { data: adminRoles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "admin");
+      if (adminRoles && adminRoles.length > 0) {
+        adminRoles.forEach((r) => adminIds.push(r.user_id));
       }
+    } catch {
+      // fallback handled below
     }
-  } catch {}
+  }
+
+  // Fallback for dev demo mode
+  if (adminIds.length === 0 && import.meta.env.DEV) {
+    adminIds.push(DEMO_ACCOUNTS.admin.id);
+  }
 
   for (const adminId of adminIds) {
     await createNotification({

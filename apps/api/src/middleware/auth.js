@@ -12,20 +12,31 @@ export async function requireAuth(req, res, next) {
 
     const token = authHeader.split(" ")[1];
 
-    // Support local development / demo tokens seamlessly
-    if (token.startsWith("mock-jwt-token-") || token.startsWith("demo-") || token === "local-dev-token") {
+    // Isolated development-only mock token bypass (strictly disabled in production)
+    const isDevMockAllowed =
+      process.env.NODE_ENV !== "production" &&
+      process.env.ALLOW_DEV_MOCK_AUTH === "true";
+
+    if (
+      isDevMockAllowed &&
+      (token.startsWith("mock-jwt-token-") || token.startsWith("demo-") || token === "local-dev-token")
+    ) {
       const email = req.headers["x-user-email"] || "citizen@roadcare.org";
-      const inferredRole = req.headers["x-user-role"] || (email.includes("admin") ? "admin" : email.includes("officer") ? "officer" : "citizen");
       req.user = {
         id: req.headers["x-user-id"] || "e4b2d130-1092-4f3b-8215-6d0e82c819a1",
         email,
         user_metadata: { full_name: email.split("@")[0] },
       };
-      req.userRole = inferredRole;
+      const { data: roleRow } = await supabaseAdmin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", req.user.id)
+        .maybeSingle();
+      req.userRole = roleRow?.role || "citizen";
       return next();
     }
 
-    // Attempt Supabase Cloud JWT validation
+    // Genuine Supabase Cloud JWT validation
     try {
       const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
       if (!error && user) {

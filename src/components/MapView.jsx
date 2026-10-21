@@ -382,8 +382,28 @@ export default function MapView({
     clusterGroupRef.current = clusterGroup;
     setMapLoaded(true);
 
+    // Initial size invalidation to guarantee full tile coverage
+    const initialTimer = setTimeout(() => {
+      map.invalidateSize();
+    }, 120);
+
+    // Dynamic resize observer for layout transitions, tab switches, and responsive resizes
+    let resizeObserver = null;
+    if (typeof ResizeObserver !== "undefined" && mapContainerRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        if (mapInstance.current) {
+          mapInstance.current.invalidateSize();
+        }
+      });
+      resizeObserver.observe(mapContainerRef.current);
+    }
+
     const markersMap = markersMapRef.current;
     return () => {
+      clearTimeout(initialTimer);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
       map.remove();
       mapInstance.current = null;
       clusterGroupRef.current = null;

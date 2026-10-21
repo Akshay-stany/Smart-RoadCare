@@ -36,43 +36,32 @@ export async function analyzeRoadImage(imageFileOrBlob) {
 
     if (res.ok) {
       const data = await res.json();
+      if (data && data.modelAvailable) {
+        return {
+          ...data,
+          inferenceTimeMs: Math.round(performance.now() - startTime),
+        };
+      }
       return {
-        ...data,
+        modelAvailable: false,
+        error: data?.error || "AI detection model is currently offline.",
+        inferenceTimeMs: Math.round(performance.now() - startTime),
+      };
+    } else {
+      const errData = await res.json().catch(() => null);
+      return {
+        modelAvailable: false,
+        error: errData?.error || "AI detection service is unavailable.",
         inferenceTimeMs: Math.round(performance.now() - startTime),
       };
     }
   } catch {
-    // API server offline or not yet started; proceed to local computer-vision evaluation
+    // API server offline or network unreachable
   }
 
-  // 2. Realistic local detection based on image analysis
-  // Returns deterministic, accurate bounding box structure matching Screen 4
-  await new Promise((resolve) => setTimeout(resolve, 850)); // simulate model latency
-
-  const inferenceDuration = Math.round(performance.now() - startTime);
-
   return {
-    modelAvailable: true,
-    modelName: "RoadDamage-YOLOv8-Civic",
-    modelVersion: "v1.2.0-rdd",
-    inferenceTimeMs: inferenceDuration,
-    primaryDefect: {
-      category: "pothole",
-      label: "Pothole",
-      confidence: 94.2,
-      severity: "High",
-      recommendation: "This image shows a significant pothole. It is recommended to mark as High Priority.",
-      boundingBox: {
-        x: 0.28,
-        y: 0.44,
-        width: 0.46,
-        height: 0.38,
-      },
-    },
-    detectedObjects: [
-      { name: "Pothole", confidence: 94.2, classId: 0 },
-      { name: "Road Crack", confidence: 12.1, classId: 1 },
-      { name: "Surface Damage", confidence: 8.4, classId: 2 },
-    ],
+    modelAvailable: false,
+    error: "AI road damage detection service is currently offline. You can proceed with standard manual reporting.",
+    inferenceTimeMs: Math.round(performance.now() - startTime),
   };
 }

@@ -26,9 +26,10 @@ export const DEMO_ACCOUNTS = {
 };
 
 const LOCAL_SESSION_KEY = "roadcare_local_session";
+const isDevDemoAllowed = Boolean(import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEV_DEMO === "true");
 
 function getStoredLocalSession() {
-  if (typeof window === "undefined" || !window.localStorage) return null;
+  if (!isDevDemoAllowed || typeof window === "undefined" || !window.localStorage) return null;
   try {
     const raw = window.localStorage.getItem(LOCAL_SESSION_KEY);
     return raw ? JSON.parse(raw) : null;
@@ -40,7 +41,7 @@ function getStoredLocalSession() {
 function storeLocalSession(sessionData) {
   if (typeof window === "undefined" || !window.localStorage) return;
   try {
-    if (sessionData) {
+    if (isDevDemoAllowed && sessionData) {
       window.localStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify(sessionData));
     } else {
       window.localStorage.removeItem(LOCAL_SESSION_KEY);
@@ -59,8 +60,12 @@ export function AuthProvider({ children }) {
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserData = useCallback(async (userId, fallbackUser = null) => {
-    if (!userId) return null;
+  const fetchUserData = useCallback(async (userId) => {
+    if (!userId) {
+      setRole(null);
+      setProfile(null);
+      return null;
+    }
     let resolvedRole = "citizen";
     let resolvedProfile = null;
 
@@ -73,14 +78,6 @@ export function AuthProvider({ children }) {
 
         if (roleRes.data?.role) {
           resolvedRole = roleRes.data.role;
-        } else if (fallbackUser?.email) {
-          // Check role intent or email domain
-          const storedIntent = typeof window !== "undefined" ? window.localStorage.getItem("roadcare_oauth_role_intent") : null;
-          if (storedIntent === "admin" || fallbackUser.email.toLowerCase().includes("admin")) {
-            resolvedRole = "admin";
-          } else if (storedIntent === "officer" || fallbackUser.email.toLowerCase().includes("officer")) {
-            resolvedRole = "officer";
-          }
         }
 
         if (profileRes.data) {
@@ -96,97 +93,40 @@ export function AuthProvider({ children }) {
       setProfile(resolvedProfile);
     }
 
-    // Persist full session to localStorage so page refresh never loses the session or role
-    const currentStored = getStoredLocalSession();
-    if (currentStored?.user || fallbackUser) {
-      const activeUser = fallbackUser || currentStored.user;
-      storeLocalSession({
-        user: activeUser,
-        session: currentStored?.session || { user: activeUser },
-        role: resolvedRole,
-        profile: resolvedProfile || {
-          id: userId,
-          user_id: userId,
-          full_name: activeUser?.user_metadata?.full_name || activeUser?.email,
-          email: activeUser?.email,
-          role: resolvedRole,
-        },
-      });
-    }
-
     return resolvedRole;
   }, []);
 
   useEffect(() => {
-    // 1. Check local offline session first for instant resume
-    const local = getStoredLocalSession();
-    if (local?.user) {
-      setUser(local.user);
-      setSession(local.session || { user: local.user });
-      setRole(local.role || "citizen");
-      setProfile(local.profile || { full_name: local.user.user_metadata?.full_name || local.user.email });
-      setLoading(false);
-    } else {
-      if (!isSupabaseConfigured()) {
-        // In local/demo mode without active session, start with demo citizen so app is immediately usable
-        const demo = DEMO_ACCOUNTS.citizen;
-        const mockUser = {
-          id: demo.id,
-          email: demo.email,
-          email_confirmed_at: demo.emailConfirmedAt,
-          created_at: new Date().toISOString(),
-          user_metadata: { full_name: demo.fullName },
-        };
-        const sessionObj = {
-          user: mockUser,
-          session: { access_token: "mock-jwt-" + Date.now(), user: mockUser },
-          role: demo.role,
-          profile: { id: demo.id, user_id: demo.id, full_name: demo.fullName, email: demo.email, role: demo.role },
-        };
-        storeLocalSession(sessionObj);
-        setUser(mockUser);
-        setSession(sessionObj.session);
-        setRole(demo.role);
-        setProfile(sessionObj.profile);
+    let mounted = true;
+
+    // 1. In dev-demo mode only, check local session
+    if (isDevDemoAllowed) {
+      const local = getStoredLocalSession();
+      if (local?.user) {
+        setUser(local.user);
+        setSession(local.session || { user: local.user });
+        setRole(local.role || "citizen");
+        setProfile(local.profile || { full_name: local.user.user_metadata?.full_name || local.user.email });
         setLoading(false);
+        return;
       }
     }
 
-    // Storage event for multi-tab sync
-    const handleStorageChange = (e) => {
-      if (e.key === LOCAL_SESSION_KEY) {
-        const updated = getStoredLocalSession();
-        if (updated?.user) {
-          setUser(updated.user);
-          setSession(updated.session || { user: updated.user });
-          setRole(updated.role || "citizen");
-          setProfile(updated.profile || null);
-        } else {
-          setUser(null);
-          setSession(null);
-          setRole(null);
-          setProfile(null);
-        }
-      }
-    };
-    window.addEventListener("storage", handleStorageChange);
-
-    // 2. Only subscribe to Supabase auth events if cloud is genuinely configured
+    // 2. Real Supabase Session initialization
     if (!isSupabaseConfigured()) {
       setLoading(false);
-      return () => {
-        window.removeEventListener("storage", handleStorageChange);
-      };
+      return;
     }
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      if (!mounted) return;
       if (newSession?.user) {
         setSession(newSession);
         setUser(newSession.user);
         await fetchUserData(newSession.user.id);
-      } else if (!getStoredLocalSession()) {
+      } else {
         setSession(null);
         setUser(null);
         setRole(null);
@@ -198,24 +138,35 @@ export function AuthProvider({ children }) {
     supabase.auth
       .getSession()
       .then(async ({ data: { session: initialSession } }) => {
+        if (!mounted) return;
         if (initialSession?.user) {
           setSession(initialSession);
           setUser(initialSession.user);
           await fetchUserData(initialSession.user.id);
+        } else {
+          setSession(null);
+          setUser(null);
+          setRole(null);
+          setProfile(null);
         }
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.warn("Error getting initial Supabase session:", err);
+      })
       .finally(() => {
-        setLoading(false);
+        if (mounted) setLoading(false);
       });
 
     return () => {
-      window.removeEventListener("storage", handleStorageChange);
+      mounted = false;
       subscription?.unsubscribe();
     };
   }, [fetchUserData]);
 
   const setLocalSessionState = (mockUser, mockRole, mockName) => {
+    if (!isDevDemoAllowed) {
+      throw new Error("Local simulated authentication is disabled in production.");
+    }
     const sessionObj = {
       user: mockUser,
       session: {
@@ -242,6 +193,9 @@ export function AuthProvider({ children }) {
   };
 
   const quickLogin = (roleType) => {
+    if (!isDevDemoAllowed) {
+      throw new Error("Demo shortcuts are disabled in production.");
+    }
     const demo = DEMO_ACCOUNTS[roleType] || DEMO_ACCOUNTS.citizen;
     const mockUser = {
       id: demo.id,
@@ -254,213 +208,147 @@ export function AuthProvider({ children }) {
   };
 
   const signUp = async (email, password, fullName) => {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: fullName },
-          emailRedirectTo: `${window.location.origin}/auth`,
-        },
-      });
-      if (!error && data?.user) {
-        return data;
+    if (!isSupabaseConfigured()) {
+      if (isDevDemoAllowed) {
+        const mockUser = {
+          id: `usr-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          email,
+          email_confirmed_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          user_metadata: { full_name: fullName },
+        };
+        return setLocalSessionState(mockUser, "citizen", fullName);
       }
-      throw error || new Error("Signup failed");
-    } catch (err) {
-      console.warn("Supabase cloud signup unavailable, using local session:", err.message);
-      // Determine role from email
-      const assignedRole = email.includes("admin")
-        ? "admin"
-        : email.includes("officer")
-        ? "officer"
-        : "citizen";
-      const mockUser = {
-        id: `usr-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        email,
-        email_confirmed_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        user_metadata: { full_name: fullName },
-      };
-      setLocalSessionState(mockUser, assignedRole, fullName);
-      return { user: mockUser };
+      throw new Error("Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.");
     }
+
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim().toLowerCase(),
+      password,
+      options: {
+        data: { full_name: fullName },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (error) {
+      throw error;
+    }
+    return data;
   };
 
   const signIn = async (email, password) => {
-    // 1. Check if email matches demo account
-    const lowerEmail = email.toLowerCase().trim();
-    for (const key of Object.keys(DEMO_ACCOUNTS)) {
-      if (DEMO_ACCOUNTS[key].email === lowerEmail) {
-        return quickLogin(key);
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Dev-only demo shortcut
+    if (isDevDemoAllowed) {
+      for (const key of Object.keys(DEMO_ACCOUNTS)) {
+        if (DEMO_ACCOUNTS[key].email === cleanEmail) {
+          return quickLogin(key);
+        }
       }
     }
 
-    // 2. Try Supabase cloud auth
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (!error && data?.user) {
-        storeLocalSession(null); // Clear offline fallback
-        return data;
-      }
-      throw error || new Error("Invalid credentials");
-    } catch (err) {
-      const msg = err.message || "";
-      const isNetworkIssue =
-        msg.includes("Failed to fetch") ||
-        msg.includes("fetch failed") ||
-        msg.includes("NetworkError") ||
-        !import.meta.env.VITE_SUPABASE_URL ||
-        import.meta.env.VITE_SUPABASE_URL.includes("placeholder") ||
-        import.meta.env.VITE_SUPABASE_URL.includes("YOUR-PROJECT-REF");
-
-      if (isNetworkIssue) {
-        console.warn("Supabase cloud unreachable; logging in via local session fallback.");
-        const assignedRole = lowerEmail.includes("admin")
-          ? "admin"
-          : lowerEmail.includes("officer")
-          ? "officer"
-          : "citizen";
-        const namePart = email.split("@")[0].replace(/[._]/g, " ");
-        const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
-        const mockUser = {
-          id: `usr-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          email: lowerEmail,
-          email_confirmed_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          user_metadata: { full_name: formattedName },
-        };
-        return setLocalSessionState(mockUser, assignedRole, formattedName);
-      }
-      throw err;
+    if (!isSupabaseConfigured()) {
+      throw new Error("Authentication service is not configured. Please check environment variables.");
     }
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: cleanEmail,
+      password,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    if (data?.session?.user) {
+      setSession(data.session);
+      setUser(data.session.user);
+      await fetchUserData(data.session.user.id);
+    }
+    return data;
   };
 
-  const signInWithGoogle = async (rolePreference = "citizen", customGmail = null, customName = null) => {
-    // If a real custom Gmail account is provided, sign in directly with real Gmail identity
-    if (customGmail && customGmail.trim()) {
-      const isAdm = rolePreference === "admin";
-      const email = customGmail.trim().toLowerCase();
-      const namePart = customName?.trim() || email.split("@")[0].replace(/[._]/g, " ");
-      const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
-
-      const realGoogleUser = {
-        id: `usr-google-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        email,
-        email_confirmed_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        app_metadata: { provider: "google", email_verified: true },
-        user_metadata: {
-          full_name: formattedName,
-          avatar_url: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(formattedName)}`,
-          provider: "google",
-          verified: true,
-        },
-      };
-
-      const sessionObj = setLocalSessionState(realGoogleUser, isAdm ? "admin" : "citizen", formattedName);
-      return { user: realGoogleUser, session: sessionObj.session, role: isAdm ? "admin" : "citizen" };
-    }
-
-    // If Supabase is not configured, avoid redirecting to placeholder domain which triggers NXDOMAIN error
+  const signInWithGoogle = async () => {
     if (!isSupabaseConfigured()) {
-      const isAdm = rolePreference === "admin";
-      const demoAccount = isAdm ? DEMO_ACCOUNTS.admin : DEMO_ACCOUNTS.citizen;
-      const mockGoogleUser = {
-        id: demoAccount.id,
-        email: demoAccount.email,
-        email_confirmed_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        app_metadata: { provider: "google", email_verified: true },
-        user_metadata: {
-          full_name: demoAccount.fullName,
-          avatar_url: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(demoAccount.fullName)}`,
-          provider: "google",
-          verified: true,
-        },
-      };
-      const sessionObj = setLocalSessionState(mockGoogleUser, demoAccount.role, demoAccount.fullName);
-      return { user: mockGoogleUser, session: sessionObj.session, role: demoAccount.role };
-    }
-
-    try {
-      // Store preferred role in localStorage so auth callback can assign it if new user
-      if (typeof window !== "undefined" && window.localStorage) {
-        window.localStorage.setItem("roadcare_oauth_role_intent", rolePreference || "citizen");
-      }
-
-      const redirectUrl = `${window.location.origin}/auth/callback`;
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: redirectUrl,
-          queryParams: {
-            access_type: "offline",
-            prompt: "consent",
-          },
-        },
-      });
-      if (error) throw error;
-      return data;
-    } catch (err) {
-      console.error("Google sign-in error:", err);
       throw new Error(
-        err.message || "Failed to initialize Google authentication. Please verify Google OAuth provider settings in Supabase."
+        "Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY."
       );
     }
+
+    const redirectUrl = `${window.location.origin}/auth/callback`;
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: redirectUrl,
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent",
+        },
+      },
+    });
+
+    if (error) throw error;
+    return data;
   };
 
   const verifyOtp = async (email, token, type = "signup") => {
-    try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        email,
-        token,
-        type,
-      });
-      if (error) throw error;
-      return data;
-    } catch (err) {
-      // Allow testing OTP code 123456 or fallback
-      if (token === "123456" || token.length === 6) {
-        return quickLogin("citizen");
-      }
-      throw err;
+    if (!isSupabaseConfigured()) {
+      throw new Error("Authentication service is not configured. Cannot verify OTP.");
     }
+
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: email.trim().toLowerCase(),
+      token: token.trim(),
+      type,
+    });
+
+    if (error) throw error;
+
+    if (data?.session?.user) {
+      setSession(data.session);
+      setUser(data.session.user);
+      await fetchUserData(data.session.user.id);
+    }
+    return data;
   };
 
   const resendOtp = async (email, type = "signup") => {
-    try {
-      const { data, error } = await supabase.auth.resend({
-        email,
-        type,
-      });
-      if (error) throw error;
-      return data;
-    } catch {
-      return { success: true, message: "Verification code resent." };
+    if (!isSupabaseConfigured()) {
+      throw new Error("Authentication service is not configured.");
     }
+
+    const { data, error } = await supabase.auth.resend({
+      email: email.trim().toLowerCase(),
+      type,
+    });
+
+    if (error) throw error;
+    return data;
   };
 
   const resetPassword = async (email) => {
-    try {
-      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (error) throw error;
-      return data;
-    } catch {
-      return { success: true };
+    if (!isSupabaseConfigured()) {
+      throw new Error("Authentication service is not configured.");
     }
+
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) throw error;
+    return data;
   };
 
   const updatePassword = async (newPassword) => {
-    try {
-      const { data, error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) throw error;
-      return data;
-    } catch {
-      return { success: true };
+    if (!isSupabaseConfigured()) {
+      throw new Error("Authentication service is not configured.");
     }
+
+    const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+    return data;
   };
 
   const signOut = async () => {
@@ -482,6 +370,7 @@ export function AuthProvider({ children }) {
     profile,
     role,
     loading,
+    isDevDemoAllowed,
     signUp,
     signIn,
     signInWithGoogle,

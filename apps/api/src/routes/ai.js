@@ -21,28 +21,21 @@ const aiBaseUrl = process.env.ROAD_DAMAGE_AI_URL || config.aiServiceUrl || "http
 router.get("/status", async (_req, res) => {
   try {
     const healthUrl = new URL("/health", aiBaseUrl);
-    const fastApiRes = await fetch(healthUrl, { method: "GET" });
+    const fastApiRes = await fetch(healthUrl, { method: "GET", signal: AbortSignal.timeout(3000) });
     if (fastApiRes.ok) {
       const data = await fastApiRes.json();
       return res.json({ success: true, ...data });
     }
   } catch {
-    // FastAPI service not yet booted
+    // FastAPI service not reachable or not yet booted
   }
 
   res.json({
     success: true,
-    modelAvailable: true,
-    modelName: "RoadDamage-YOLOv8-Civic",
+    modelAvailable: false,
+    modelName: "RoadDamage-YOLOv8",
     modelVersion: "v1.2.0-rdd",
-    supportedClasses: [
-      "Pothole",
-      "Alligator Crack",
-      "Longitudinal Crack",
-      "Surface Damage",
-      "Manhole Hazard",
-    ],
-    mode: "hybrid_inference",
+    message: "AI road damage detection service is currently offline. Model weights must be placed at services/road-damage-ai/models/road_damage_best.pt or ROAD_DAMAGE_AI_URL configured.",
   });
 });
 
@@ -55,7 +48,7 @@ router.post("/analyze-image", upload.single("image"), async (req, res, next) => 
 
     const startTime = performance.now();
 
-    // Attempt to proxy to FastAPI
+    // Attempt real inference via FastAPI microservice
     try {
       const formData = new FormData();
       const blob = new Blob([req.file.buffer], { type: req.file.mimetype });
@@ -65,6 +58,7 @@ router.post("/analyze-image", upload.single("image"), async (req, res, next) => 
       const aiResponse = await fetch(analyzeUrl, {
         method: "POST",
         body: formData,
+        signal: AbortSignal.timeout(8000),
       });
 
       if (aiResponse.ok) {
@@ -76,34 +70,16 @@ router.post("/analyze-image", upload.single("image"), async (req, res, next) => 
         });
       }
     } catch {
-      // Fall through to deterministic detector
+      // Microservice offline or connection timed out
     }
 
-    // High quality computer-vision analysis baseline
-    res.json({
-      success: true,
-      modelAvailable: true,
-      modelName: "RoadDamage-YOLOv8-Civic",
-      modelVersion: "v1.2.0-rdd",
+    // Do NOT return fabricated predictions with fake confidence.
+    // Return honest unavailable status so UI can handle it gracefully.
+    return res.status(503).json({
+      success: false,
+      modelAvailable: false,
+      error: "AI road damage detection service is currently offline or model weights are unconfigured. Manual complaint reporting remains fully operational.",
       inferenceTimeMs: Math.round(performance.now() - startTime),
-      primaryDefect: {
-        category: "pothole",
-        label: "Pothole",
-        confidence: 94.2,
-        severity: "High",
-        recommendation: "This image shows a significant pothole. It is recommended to mark as High Priority.",
-        boundingBox: {
-          x: 0.28,
-          y: 0.44,
-          width: 0.46,
-          height: 0.38,
-        },
-      },
-      detectedObjects: [
-        { name: "Pothole", confidence: 94.2, classId: 0 },
-        { name: "Road Crack", confidence: 12.1, classId: 1 },
-        { name: "Surface Damage", confidence: 8.4, classId: 2 },
-      ],
     });
   } catch (err) {
     next(err);

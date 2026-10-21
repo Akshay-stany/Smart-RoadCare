@@ -134,9 +134,15 @@ export default function ReportForm({ onSuccess }) {
     setAnalyzingAi(true);
     try {
       const result = await analyzeRoadImage(imageFile || previewUrl);
-      setAiResult(result);
-      setShowAiResultModal(true);
-      toast.success("AI detection completed successfully!");
+      if (result && result.modelAvailable && result.primaryDefect) {
+        setAiResult(result);
+        setShowAiResultModal(true);
+        toast.success("AI detection completed successfully!");
+      } else {
+        toast.info(
+          result?.error || "AI detection service is currently offline. You can fill out the complaint details below manually."
+        );
+      }
     } catch (err) {
       toast.error(err.message || "AI detection service is currently unavailable.");
     } finally {

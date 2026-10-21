@@ -69,6 +69,7 @@ app.get("/api", (_req, res) => {
 });
 
 // Route families
+app.use("/api", healthRoutes);
 app.use("/api/v1", healthRoutes);
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/complaints", complaintRoutes);
