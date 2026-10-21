@@ -35,16 +35,26 @@ export default defineConfig(({ mode }) => ({
                         if (id.includes("@supabase")) {
                             return "supabase-vendors";
                         }
-                        if (id.includes("recharts")) {
+                        if (id.includes("recharts") || id.includes("d3-")) {
                             return "charts-vendors";
                         }
-                        if (id.includes("@radix-ui") || id.includes("class-variance-authority") || id.includes("tailwind-merge")) {
+                        if (id.includes("@radix-ui") || id.includes("class-variance-authority") || id.includes("tailwind-merge") || id.includes("clsx")) {
                             return "ui-vendors";
                         }
-                        if (id.includes("react") || id.includes("react-dom") || id.includes("react-router")) {
-                            return "react-vendors";
+                        if (
+                            id.includes("/node_modules/react/") ||
+                            id.includes("\\node_modules\\react\\") ||
+                            id.includes("/node_modules/react-dom/") ||
+                            id.includes("\\node_modules\\react-dom\\") ||
+                            id.includes("/node_modules/react-router/") ||
+                            id.includes("\\node_modules\\react-router\\") ||
+                            id.includes("/node_modules/react-router-dom/") ||
+                            id.includes("\\node_modules\\react-router-dom\\") ||
+                            id.includes("/node_modules/scheduler/") ||
+                            id.includes("\\node_modules\\scheduler\\")
+                        ) {
+                            return "react-core";
                         }
-                        return "misc-vendors";
                     }
                 },
             },

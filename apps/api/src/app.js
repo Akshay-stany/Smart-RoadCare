@@ -20,7 +20,20 @@ const app = express();
 app.use(helmet());
 app.use(
   cors({
-    origin: [config.webOrigin, "http://localhost:8080", "http://localhost:5173"],
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const isAllowedLocal =
+        origin === "http://localhost:8080" ||
+        origin === "http://localhost:5173" ||
+        origin === "http://localhost:3000" ||
+        origin === "http://localhost:4173" ||
+        origin === config.webOrigin;
+      const isVercel = origin.endsWith(".vercel.app");
+      if (isAllowedLocal || isVercel || process.env.NODE_ENV !== "production") {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
   })
 );
@@ -44,6 +57,16 @@ app.use((req, res, next) => {
 // JSON and URL-encoded body parsers
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// Root API status endpoint
+app.get("/api", (_req, res) => {
+  res.json({
+    service: "RoadCare Express API",
+    status: "healthy",
+    version: "2.0.0",
+    docs: "/api/v1/health",
+  });
+});
 
 // Route families
 app.use("/api/v1", healthRoutes);

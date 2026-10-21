@@ -91,6 +91,49 @@ npm run dev:ai
 - `npm run test:all` — Executes all 23 automated tests across frontend, backend, and AI service.
 - `npm run lint` — Runs ESLint on all project JavaScript files (0 errors).
 - `npm run build` — Generates optimized production bundle in `dist/`.
+- `npm run preview` — Locally previews the production build at `http://localhost:4173`.
+
+---
+
+## Vercel Deployment Guide
+
+RoadCare is optimized for direct, one-click or Git-connected deployment on **Vercel**.
+
+### 1. Vercel Project Settings
+When importing your repository in Vercel:
+- **Framework Preset**: `Vite`
+- **Root Directory**: `./`
+- **Build Command**: `vite build` (or `npm run build`)
+- **Output Directory**: `dist`
+- **Install Command**: `npm install`
+
+### 2. Environment Variables Configuration
+In your Vercel Project Dashboard (`Settings` -> `Environment Variables`), configure the following keys:
+
+| Variable Name | Environment | Description | Example / Value |
+|---|---|---|---|
+| `VITE_SUPABASE_URL` | Production & Preview | Supabase project URL | `https://xxxx.supabase.co` |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Production & Preview | Supabase anon public key | `eyJhbGciOi...` |
+| `VITE_SUPABASE_PROJECT_ID` | Production & Preview | Supabase project reference | `xxxx` |
+| `SUPABASE_URL` | Production & Preview | Server-side Supabase URL | `https://xxxx.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Production & Preview | Server-side privileged key (never expose to client) | `eyJhbGciOi...` |
+| `ROAD_DAMAGE_AI_URL` | Optional | External AI Microservice (if hosted on Railway/Render) | `https://your-ai-service.railway.app` |
+
+*(Note: If `VITE_API_URL` is omitted, the frontend automatically uses relative `/api` paths routed via Vercel rewrites to the serverless Express backend).*
+
+### 3. Architecture on Vercel
+- **Frontend SPA**: Built with Vite and served statically from `dist/`. Direct page refreshes (`/map`, `/dashboard`, `/admin`, `/auth`, `/report`) are rewritten to `/index.html` via `vercel.json` to prevent 404s.
+- **Backend API**: The Express API is bridged to a Node.js Serverless Function via `api/index.js`. Any request matching `/api/*` is handled seamlessly.
+- **AI Microservice**: If an external AI endpoint is not provided, the backend falls back to built-in deterministic road defect detection so the application is always 100% operational.
+
+### 4. Common Deployment Troubleshooting
+- **Blank page on Visit**:
+  - Ensure the Vite build succeeds without circular chunk warnings (`npm run build`).
+  - Verify that required `VITE_SUPABASE_*` environment variables are added in Vercel.
+- **404 on refresh (`/map` or `/dashboard`)**:
+  - Handled automatically by `vercel.json` SPA rewrite rules (`/(.*)` -> `/index.html`).
+- **CORS error on API calls**:
+  - The Express backend dynamically allows requests from `*.vercel.app` domains and same-origin requests.
 
 ---
 

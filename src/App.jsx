@@ -9,24 +9,47 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import RequireAuth from "@/components/RequireAuth";
 import { Loader2 } from "lucide-react";
 
-// Lazy-loaded application pages
-const Index = lazy(() => import("./pages/Index"));
-const AuthPage = lazy(() => import("./pages/AuthPage"));
-const AuthCallback = lazy(() => import("./pages/AuthCallback"));
-const VerifyOtpPage = lazy(() => import("./pages/VerifyOtpPage"));
-const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const ReportPage = lazy(() => import("./pages/ReportPage"));
-const MyComplaintsPage = lazy(() => import("./pages/MyComplaintsPage"));
-const ComplaintDetailPage = lazy(() => import("./pages/ComplaintDetailPage"));
-const MapPage = lazy(() => import("./pages/MapPage"));
-const LiveDetectionPage = lazy(() => import("./pages/LiveDetectionPage"));
-const ProfilePage = lazy(() => import("./pages/ProfilePage"));
-const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
-const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
-const OfficerDashboard = lazy(() => import("./pages/OfficerDashboard"));
-const OfficerTaskPage = lazy(() => import("./pages/OfficerTaskPage"));
-const NotFound = lazy(() => import("./pages/NotFound"));
+// Resilient lazy import that automatically refreshes stale chunk caches on new deployments
+function lazyRetry(componentImport) {
+  return lazy(async () => {
+    try {
+      const page = await componentImport();
+      if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem("rc_chunk_retry");
+      }
+      return page;
+    } catch (error) {
+      if (typeof window !== "undefined") {
+        const alreadyRetried = window.sessionStorage.getItem("rc_chunk_retry");
+        if (!alreadyRetried) {
+          window.sessionStorage.setItem("rc_chunk_retry", "true");
+          window.location.reload();
+          return new Promise(() => {});
+        }
+      }
+      throw error;
+    }
+  });
+}
+
+// Lazy-loaded application pages with stale-chunk protection
+const Index = lazyRetry(() => import("./pages/Index"));
+const AuthPage = lazyRetry(() => import("./pages/AuthPage"));
+const AuthCallback = lazyRetry(() => import("./pages/AuthCallback"));
+const VerifyOtpPage = lazyRetry(() => import("./pages/VerifyOtpPage"));
+const ResetPasswordPage = lazyRetry(() => import("./pages/ResetPasswordPage"));
+const Dashboard = lazyRetry(() => import("./pages/Dashboard"));
+const ReportPage = lazyRetry(() => import("./pages/ReportPage"));
+const MyComplaintsPage = lazyRetry(() => import("./pages/MyComplaintsPage"));
+const ComplaintDetailPage = lazyRetry(() => import("./pages/ComplaintDetailPage"));
+const MapPage = lazyRetry(() => import("./pages/MapPage"));
+const LiveDetectionPage = lazyRetry(() => import("./pages/LiveDetectionPage"));
+const ProfilePage = lazyRetry(() => import("./pages/ProfilePage"));
+const NotificationsPage = lazyRetry(() => import("./pages/NotificationsPage"));
+const AdminDashboard = lazyRetry(() => import("./pages/AdminDashboard"));
+const OfficerDashboard = lazyRetry(() => import("./pages/OfficerDashboard"));
+const OfficerTaskPage = lazyRetry(() => import("./pages/OfficerTaskPage"));
+const NotFound = lazyRetry(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
   defaultOptions: {

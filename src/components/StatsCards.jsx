@@ -14,10 +14,13 @@ const StatsCards = memo(function StatsCards() {
     const { data: profiles } = useQuery({
         queryKey: ["profiles-all"],
         queryFn: async () => {
-            const { data, error } = await supabase.from("profiles").select("user_id, full_name, email");
-            if (error)
-                throw error;
-            return data;
+            try {
+                const { data, error } = await supabase.from("profiles").select("user_id, full_name, email");
+                if (error) return [];
+                return data || [];
+            } catch {
+                return [];
+            }
         },
         enabled: isAdmin, // names/emails are only loaded for admins
         staleTime: 5 * 60_000,
