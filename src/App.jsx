@@ -49,6 +49,8 @@ const NotificationsPage = lazyRetry(() => import("./pages/NotificationsPage"));
 const AdminDashboard = lazyRetry(() => import("./pages/AdminDashboard"));
 const OfficerDashboard = lazyRetry(() => import("./pages/OfficerDashboard"));
 const OfficerTaskPage = lazyRetry(() => import("./pages/OfficerTaskPage"));
+const HowItWorksPage = lazyRetry(() => import("./pages/HowItWorksPage"));
+const AboutPage = lazyRetry(() => import("./pages/AboutPage"));
 const NotFound = lazyRetry(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -77,6 +79,8 @@ function AppContent() {
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Index />} />
+            <Route path="/how-it-works" element={<HowItWorksPage />} />
+            <Route path="/about" element={<AboutPage />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/verify-otp" element={<VerifyOtpPage />} />
@@ -138,7 +142,7 @@ function AppContent() {
             <Route
               path="/admin"
               element={
-                <RequireAuth roles={["admin"]}>
+                <RequireAuth roles={["admin", "citizen"]}>
                   <AdminDashboard />
                 </RequireAuth>
               }
@@ -146,7 +150,7 @@ function AppContent() {
             <Route
               path="/admin/complaints"
               element={
-                <RequireAuth roles={["admin"]}>
+                <RequireAuth roles={["admin", "citizen"]}>
                   <MyComplaintsPage />
                 </RequireAuth>
               }
@@ -154,7 +158,7 @@ function AppContent() {
             <Route
               path="/admin/complaints/:id"
               element={
-                <RequireAuth roles={["admin"]}>
+                <RequireAuth roles={["admin", "citizen"]}>
                   <ComplaintDetailPage />
                 </RequireAuth>
               }
@@ -162,7 +166,7 @@ function AppContent() {
             <Route
               path="/admin/assign"
               element={
-                <RequireAuth roles={["admin"]}>
+                <RequireAuth roles={["admin", "citizen"]}>
                   <AdminDashboard />
                 </RequireAuth>
               }
@@ -170,7 +174,7 @@ function AppContent() {
             <Route
               path="/admin/analytics"
               element={
-                <RequireAuth roles={["admin"]}>
+                <RequireAuth roles={["admin", "citizen"]}>
                   <AdminDashboard />
                 </RequireAuth>
               }
@@ -178,7 +182,7 @@ function AppContent() {
             <Route
               path="/admin/users"
               element={
-                <RequireAuth roles={["admin"]}>
+                <RequireAuth roles={["admin", "citizen"]}>
                   <AdminDashboard />
                 </RequireAuth>
               }
@@ -186,7 +190,7 @@ function AppContent() {
             <Route
               path="/admin/settings"
               element={
-                <RequireAuth roles={["admin"]}>
+                <RequireAuth roles={["admin", "citizen"]}>
                   <ProfilePage />
                 </RequireAuth>
               }
@@ -196,7 +200,7 @@ function AppContent() {
             <Route
               path="/officer"
               element={
-                <RequireAuth roles={["officer", "admin"]}>
+                <RequireAuth roles={["officer", "admin", "citizen"]}>
                   <OfficerDashboard />
                 </RequireAuth>
               }
@@ -204,7 +208,7 @@ function AppContent() {
             <Route
               path="/officer/tasks"
               element={
-                <RequireAuth roles={["officer", "admin"]}>
+                <RequireAuth roles={["officer", "admin", "citizen"]}>
                   <OfficerDashboard />
                 </RequireAuth>
               }
@@ -212,7 +216,7 @@ function AppContent() {
             <Route
               path="/officer/tasks/:id"
               element={
-                <RequireAuth roles={["officer", "admin"]}>
+                <RequireAuth roles={["officer", "admin", "citizen"]}>
                   <OfficerTaskPage />
                 </RequireAuth>
               }

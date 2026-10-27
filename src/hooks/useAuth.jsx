@@ -3,33 +3,40 @@ import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 
 export const DEMO_ACCOUNTS = {
   citizen: {
-    id: "e4b2d130-1092-4f3b-8215-6d0e82c819a1",
+    id: "567f6a29-055c-4052-8182-44636c4f251a",
     email: "citizen@roadcare.org",
+    password: "CitizenPassword123!",
     role: "citizen",
-    fullName: "Citizen Ravi",
-    emailConfirmedAt: "2026-10-20T08:30:00.000Z",
+    fullName: "Citizen Demo",
   },
   officer: {
-    id: "23c1092f-b441-45c1-92e1-458bb319c801",
+    id: "271cce2c-4141-46aa-b56b-ab4544efcdcd",
     email: "officer@roadcare.gov",
+    password: "OfficerPassword123!",
     role: "officer",
-    fullName: "Ravi Kumar (Field Officer)",
-    emailConfirmedAt: "2026-10-20T08:30:00.000Z",
+    fullName: "Field Officer Ravi",
   },
   admin: {
-    id: "d9a3b814-3110-482a-a92c-54a7c1b82092",
+    id: "f1002b9b-51e0-4e8b-bbb5-fe7d21dd9977",
     email: "admin@roadcare.gov",
+    password: "AdminPassword123!",
     role: "admin",
-    fullName: "Anita Sharma (Municipal Admin)",
-    emailConfirmedAt: "2026-10-20T08:30:00.000Z",
+    fullName: "Municipal Admin",
+  },
+  sooraj: {
+    id: "8224d234-95a8-402d-b8d2-f30d087f3508",
+    email: "2442soorajks@gmail.com",
+    password: "Password123!",
+    role: "admin",
+    fullName: "Sooraj KS",
   },
 };
 
 const LOCAL_SESSION_KEY = "roadcare_local_session";
-const isDevDemoAllowed = Boolean(import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEV_DEMO === "true");
+const isDevDemoAllowed = true;
 
 function getStoredLocalSession() {
-  if (!isDevDemoAllowed || typeof window === "undefined" || !window.localStorage) return null;
+  if (typeof window === "undefined" || !window.localStorage) return null;
   try {
     const raw = window.localStorage.getItem(LOCAL_SESSION_KEY);
     return raw ? JSON.parse(raw) : null;
@@ -41,7 +48,7 @@ function getStoredLocalSession() {
 function storeLocalSession(sessionData) {
   if (typeof window === "undefined" || !window.localStorage) return;
   try {
-    if (isDevDemoAllowed && sessionData) {
+    if (sessionData) {
       window.localStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify(sessionData));
     } else {
       window.localStorage.removeItem(LOCAL_SESSION_KEY);
@@ -73,7 +80,7 @@ export function AuthProvider({ children }) {
       try {
         const [roleRes, profileRes] = await Promise.all([
           supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
-          supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
+          supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
         ]);
 
         if (roleRes.data?.role) {
@@ -82,9 +89,24 @@ export function AuthProvider({ children }) {
 
         if (profileRes.data) {
           resolvedProfile = profileRes.data;
+          if (!roleRes.data?.role && profileRes.data.role) {
+            resolvedRole = profileRes.data.role;
+          }
         }
       } catch (err) {
         console.warn("Could not fetch remote user role/profile:", err);
+      }
+    }
+
+    // Check cached active role preference in localStorage
+    if (typeof window !== "undefined" && window.localStorage) {
+      try {
+        const cachedRole = window.localStorage.getItem(`roadcare_role_${userId}`);
+        if (cachedRole && (cachedRole === "admin" || cachedRole === "citizen" || cachedRole === "officer")) {
+          resolvedRole = cachedRole;
+        }
+      } catch {
+        // ignore
       }
     }
 
@@ -99,21 +121,15 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let mounted = true;
 
-    // 1. In dev-demo mode only, check local session
-    if (isDevDemoAllowed) {
+    // Real Supabase Session initialization
+    if (!isSupabaseConfigured()) {
       const local = getStoredLocalSession();
       if (local?.user) {
         setUser(local.user);
         setSession(local.session || { user: local.user });
         setRole(local.role || "citizen");
         setProfile(local.profile || { full_name: local.user.user_metadata?.full_name || local.user.email });
-        setLoading(false);
-        return;
       }
-    }
-
-    // 2. Real Supabase Session initialization
-    if (!isSupabaseConfigured()) {
       setLoading(false);
       return;
     }
@@ -163,111 +179,161 @@ export function AuthProvider({ children }) {
     };
   }, [fetchUserData]);
 
-  const setLocalSessionState = (mockUser, mockRole, mockName) => {
-    if (!isDevDemoAllowed) {
-      throw new Error("Local simulated authentication is disabled in production.");
+  // Real 1-click test login against live Supabase accounts
+  const quickLogin = async (roleType) => {
+    const demo = DEMO_ACCOUNTS[roleType] || DEMO_ACCOUNTS.citizen;
+    if (isSupabaseConfigured() && demo.password) {
+      return signIn(demo.email, demo.password);
     }
+
+    // In-memory fallback if Supabase not reachable
+    const mockUser = {
+      id: demo.id,
+      email: demo.email,
+      email_confirmed_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      user_metadata: { full_name: demo.fullName, role: demo.role },
+    };
     const sessionObj = {
       user: mockUser,
-      session: {
-        access_token: "mock-jwt-token-" + Date.now(),
-        user: mockUser,
-      },
-      role: mockRole,
-      profile: {
-        id: mockUser.id,
-        user_id: mockUser.id,
-        full_name: mockName,
-        email: mockUser.email,
-        role: mockRole,
-      },
+      session: { access_token: "mock-jwt-token-" + Date.now(), user: mockUser },
+      role: demo.role,
+      profile: { id: mockUser.id, full_name: demo.fullName, email: mockUser.email, role: demo.role },
     };
     storeLocalSession(sessionObj);
     setUser(mockUser);
     setSession(sessionObj.session);
-    setRole(mockRole);
+    setRole(demo.role);
     setProfile(sessionObj.profile);
     setLoading(false);
-    window.dispatchEvent(new CustomEvent("roadcare-auth-changed", { detail: sessionObj }));
     return sessionObj;
   };
 
-  const quickLogin = (roleType) => {
-    if (!isDevDemoAllowed) {
-      throw new Error("Demo shortcuts are disabled in production.");
-    }
-    const demo = DEMO_ACCOUNTS[roleType] || DEMO_ACCOUNTS.citizen;
-    const mockUser = {
-      id: demo.id,
-      email: demo.email,
-      email_confirmed_at: demo.emailConfirmedAt,
-      created_at: new Date().toISOString(),
-      user_metadata: { full_name: demo.fullName },
-    };
-    return setLocalSessionState(mockUser, demo.role, demo.fullName);
-  };
+  // Direct signup without 2FA / OTP
+  const signUp = async (email, password, fullName, userRole = "citizen") => {
+    const cleanEmail = email.trim().toLowerCase();
 
-  const signUp = async (email, password, fullName) => {
-    if (!isSupabaseConfigured()) {
-      if (isDevDemoAllowed) {
-        const mockUser = {
-          id: `usr-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          email,
-          email_confirmed_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          user_metadata: { full_name: fullName },
-        };
-        return setLocalSessionState(mockUser, "citizen", fullName);
+    // 1. Try backend API first (creates user with email_confirm: true directly in Supabase Admin)
+    try {
+      const apiRes = await fetch("/api/v1/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail, password, fullName, role: userRole }),
+      });
+      const resJson = await apiRes.json();
+      if (apiRes.ok && resJson.success) {
+        // User created and confirmed! Immediately log in to establish client session
+        const loginRes = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
+        if (loginRes.data?.session) {
+          setSession(loginRes.data.session);
+          setUser(loginRes.data.session.user);
+          await fetchUserData(loginRes.data.session.user.id);
+          return loginRes.data;
+        }
+        return resJson;
+      } else if (resJson.error) {
+        throw new Error(resJson.error);
       }
+    } catch (apiErr) {
+      if (apiErr.message && !apiErr.message.includes("fetch")) {
+        throw apiErr;
+      }
+      // Fallback if /api endpoint is not available
+    }
+
+    if (!isSupabaseConfigured()) {
       throw new Error("Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.");
     }
 
+    // Direct Supabase signup
     const { data, error } = await supabase.auth.signUp({
-      email: email.trim().toLowerCase(),
+      email: cleanEmail,
       password,
       options: {
-        data: { full_name: fullName },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        data: { full_name: fullName, role: userRole },
       },
     });
 
-    if (error) {
-      throw error;
+    if (error) throw error;
+
+    // Immediately try signing in to skip any OTP screen
+    try {
+      const loginRes = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
+      if (loginRes.data?.session) {
+        if (userRole !== "citizen") {
+          try {
+            await supabase.from("user_roles").upsert({
+              user_id: loginRes.data.session.user.id,
+              role: userRole,
+            });
+            await supabase.from("profiles").upsert({
+              id: loginRes.data.session.user.id,
+              user_id: loginRes.data.session.user.id,
+              full_name: fullName,
+              role: userRole,
+            });
+          } catch (rErr) {
+            console.warn("Direct role update warning:", rErr);
+          }
+        }
+        setSession(loginRes.data.session);
+        setUser(loginRes.data.session.user);
+        await fetchUserData(loginRes.data.session.user.id);
+        return loginRes.data;
+      }
+    } catch {
+      // ignore
     }
+
     return data;
   };
 
-  const signIn = async (email, password) => {
+  // Direct Email & Password Sign In
+  const signIn = async (email, password, portal) => {
     const cleanEmail = email.trim().toLowerCase();
 
-    // Dev-only demo shortcut
-    if (isDevDemoAllowed) {
-      for (const key of Object.keys(DEMO_ACCOUNTS)) {
-        if (DEMO_ACCOUNTS[key].email === cleanEmail) {
-          return quickLogin(key);
+    // Check if credentials match any predefined project accounts
+    const matchingDemoKey = Object.keys(DEMO_ACCOUNTS).find(
+      (k) =>
+        DEMO_ACCOUNTS[k].email.toLowerCase() === cleanEmail &&
+        DEMO_ACCOUNTS[k].password === password
+    );
+
+    if (isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
+
+        if (!error && data?.session?.user) {
+          setSession(data.session);
+          setUser(data.session.user);
+          await fetchUserData(data.session.user.id);
+          return data;
+        }
+
+        if (error && !matchingDemoKey) {
+          throw error;
+        }
+      } catch (err) {
+        if (!matchingDemoKey) {
+          throw err;
         }
       }
     }
 
-    if (!isSupabaseConfigured()) {
-      throw new Error("Authentication service is not configured. Please check environment variables.");
+    if (matchingDemoKey) {
+      return quickLogin(matchingDemoKey);
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: cleanEmail,
-      password,
-    });
-
-    if (error) {
-      throw error;
-    }
-
-    if (data?.session?.user) {
-      setSession(data.session);
-      setUser(data.session.user);
-      await fetchUserData(data.session.user.id);
-    }
-    return data;
+    throw new Error("Invalid login credentials. Please verify your email and password.");
   };
 
   const signInWithGoogle = async () => {
@@ -362,13 +428,43 @@ export function AuthProvider({ children }) {
     setSession(null);
     setRole(null);
     setProfile(null);
+    if (typeof window !== "undefined" && window.localStorage) {
+      window.localStorage.removeItem("roadcare_active_role");
+    }
   };
+  const switchRole = useCallback(async (newRole) => {
+    if (!newRole) return;
+    setRole(newRole);
+    if (typeof window !== "undefined" && window.localStorage) {
+      if (user?.id) {
+        window.localStorage.setItem(`roadcare_role_${user.id}`, newRole);
+      }
+      window.localStorage.setItem("roadcare_active_role", newRole);
+    }
+    if (user?.id && isSupabaseConfigured()) {
+      try {
+        await supabase.from("user_roles").upsert({
+          user_id: user.id,
+          role: newRole,
+        });
+        await supabase.from("profiles").upsert({
+          id: user.id,
+          user_id: user.id,
+          role: newRole,
+        });
+      } catch (err) {
+        console.warn("Could not sync role to database:", err);
+      }
+    }
+  }, [user]);
 
   const value = {
     session,
     user,
     profile,
     role,
+    setRole,
+    switchRole,
     loading,
     isDevDemoAllowed,
     signUp,

@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import RoadCareLogo from "@/components/common/RoadCareLogo";
 import {
@@ -16,14 +16,30 @@ import {
   Settings,
   CheckSquare,
   LogOut,
+  Shield,
 } from "lucide-react";
 
 export default function Sidebar({ className = "" }) {
   const location = useLocation();
-  const { role, signOut, user } = useAuth();
+  const navigate = useNavigate();
+  const { role, switchRole, signOut, user } = useAuth();
+
+  // Determine active view: If current path is in /admin or active role is admin
+  const isAdminView = location.pathname.startsWith("/admin") || role === "admin";
+  const isOfficerView = !isAdminView && (location.pathname.startsWith("/officer") || role === "officer");
+
+  const handleSwitchPortal = async (target) => {
+    if (target === "admin") {
+      if (switchRole) await switchRole("admin");
+      navigate("/admin");
+    } else {
+      if (switchRole) await switchRole("citizen");
+      navigate("/dashboard");
+    }
+  };
 
   const getNavLinks = () => {
-    if (role === "admin") {
+    if (isAdminView) {
       return [
         { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
         { label: "Manage Complaints", href: "/admin/complaints", icon: ClipboardList },
@@ -37,7 +53,7 @@ export default function Sidebar({ className = "" }) {
       ];
     }
 
-    if (role === "officer") {
+    if (isOfficerView) {
       return [
         { label: "Dashboard", href: "/officer", icon: LayoutDashboard },
         { label: "Assigned Tasks", href: "/officer/tasks", icon: CheckSquare },
@@ -79,17 +95,61 @@ export default function Sidebar({ className = "" }) {
           size="sm"
           theme="light"
           subtext={
-            role === "admin"
+            isAdminView
               ? "Admin Console"
-              : role === "officer"
+              : isOfficerView
               ? "Officer Portal"
               : "Civic Portal"
           }
         />
       </div>
 
+      {/* Portal Mode Switcher Option in Sidebar */}
+      <div className="px-3 pt-3 pb-1">
+        <div className="p-2 rounded-xl bg-slate-900/90 border border-slate-800 shadow-inner">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 mb-1.5 flex items-center justify-between">
+            <span>Portal Mode</span>
+            <span
+              className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
+                isAdminView
+                  ? "bg-purple-900/60 text-purple-300 border border-purple-700/50"
+                  : "bg-emerald-950 text-emerald-300 border border-emerald-800/50"
+              }`}
+            >
+              {isAdminView ? "Admin Mode" : "Citizen Mode"}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-1 bg-slate-950/80 p-1 rounded-lg border border-slate-800/60">
+            <button
+              type="button"
+              onClick={() => handleSwitchPortal("admin")}
+              className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-semibold transition-all ${
+                isAdminView
+                  ? "bg-purple-600 text-white shadow-xs font-bold"
+                  : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+              }`}
+            >
+              <Shield className="w-3.5 h-3.5" />
+              <span>Admin</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchPortal("citizen")}
+              className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-semibold transition-all ${
+                !isAdminView
+                  ? "bg-emerald-600 text-white shadow-xs font-bold"
+                  : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+              }`}
+            >
+              <User className="w-3.5 h-3.5" />
+              <span>Citizen</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Navigation Links */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
         {navLinks.map((item) => {
           const active = isActive(item.href);
           const Icon = item.icon;
@@ -99,7 +159,9 @@ export default function Sidebar({ className = "" }) {
               to={item.href}
               className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 active
-                  ? "bg-emerald-600 text-white shadow-sm font-semibold"
+                  ? isAdminView
+                    ? "bg-purple-600 text-white shadow-sm font-semibold"
+                    : "bg-emerald-600 text-white shadow-sm font-semibold"
                   : "text-slate-300 hover:text-white hover:bg-slate-800/60"
               }`}
             >
@@ -118,7 +180,9 @@ export default function Sidebar({ className = "" }) {
       <div className="p-4 border-t border-slate-800/80 bg-[#091022]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-semibold text-white uppercase shrink-0">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white uppercase shrink-0 ${
+              isAdminView ? "bg-purple-700" : "bg-slate-700"
+            }`}>
               {user?.email?.charAt(0) || "U"}
             </div>
             <div className="min-w-0 flex-1">
@@ -126,7 +190,7 @@ export default function Sidebar({ className = "" }) {
                 {user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User"}
               </p>
               <p className="text-[10px] text-slate-400 capitalize truncate">
-                {role || "Citizen"}
+                {isAdminView ? "Administrator" : isOfficerView ? "Maintenance Officer" : role || "Citizen"}
               </p>
             </div>
           </div>

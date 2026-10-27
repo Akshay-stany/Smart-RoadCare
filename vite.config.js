@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => ({
     plugins: [react()].filter(Boolean),
     resolve: {
         alias: {
-            "@": path.resolve(__dirname, "./src"),
+            "@": path.resolve(import.meta.dirname || __dirname, "./src"),
         },
         dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
     },

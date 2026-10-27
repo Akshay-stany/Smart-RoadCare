@@ -50,7 +50,9 @@ export default function RoadCareLogo({
           </span>
           {subtext && (
             <span
-              className={`font-semibold tracking-wider uppercase mt-0.5 leading-none ${current.sub} text-emerald-400`}
+              className={`font-bold tracking-wider uppercase mt-1 leading-none ${current.sub} ${
+                isLightText ? "text-emerald-400" : "text-emerald-600"
+              }`}
             >
               {subtext}
             </span>

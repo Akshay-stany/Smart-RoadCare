@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import NotificationBell from "@/components/NotificationBell";
@@ -13,37 +13,42 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function TopBar({ onMenuClick }) {
-  const { user, role, signOut, quickLogin } = useAuth();
+  const { user, role, switchRole, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const handleSwitchRole = (newRole) => {
-    quickLogin(newRole);
+  const isAdminView = location.pathname.startsWith("/admin") || role === "admin";
+  const isOfficerView = !isAdminView && (location.pathname.startsWith("/officer") || role === "officer");
+
+  const handleSwitchRole = async (newRole) => {
+    if (switchRole) {
+      await switchRole(newRole);
+    }
     if (newRole === "admin") navigate("/admin");
     else if (newRole === "officer") navigate("/officer");
     else navigate("/dashboard");
   };
 
   const getRoleBadge = () => {
-    switch (role) {
-      case "admin":
-        return (
-          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs py-0.5">
-            Administrator
-          </Badge>
-        );
-      case "officer":
-        return (
-          <Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-200 text-xs py-0.5">
-            Maintenance Officer
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs py-0.5">
-            Citizen
-          </Badge>
-        );
+    if (isAdminView) {
+      return (
+        <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs py-0.5">
+          Administrator
+        </Badge>
+      );
     }
+    if (isOfficerView) {
+      return (
+        <Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-200 text-xs py-0.5">
+          Maintenance Officer
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs py-0.5">
+        Citizen
+      </Badge>
+    );
   };
 
   return (
@@ -71,7 +76,9 @@ export default function TopBar({ onMenuClick }) {
         {/* User Profile Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-2.5 p-1.5 rounded-full hover:bg-slate-100 transition-colors focus:outline-none">
-            <div className="w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-bold uppercase shadow-xs">
+            <div className={`w-8 h-8 rounded-full text-white flex items-center justify-center text-xs font-bold uppercase shadow-xs ${
+              isAdminView ? "bg-purple-700" : "bg-slate-800"
+            }`}>
               {user?.email?.charAt(0) || "U"}
             </div>
             <div className="hidden md:flex flex-col text-left">
@@ -79,7 +86,7 @@ export default function TopBar({ onMenuClick }) {
                 {user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User"}
               </span>
               <span className="text-[10px] text-slate-500 capitalize leading-tight">
-                {role || "Citizen"}
+                {isAdminView ? "Administrator" : isOfficerView ? "Maintenance Officer" : role || "Citizen"}
               </span>
             </div>
           </DropdownMenuTrigger>
@@ -110,31 +117,31 @@ export default function TopBar({ onMenuClick }) {
 
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-[10px] text-slate-400 uppercase tracking-wider font-bold py-1">
-              Switch Persona
+              Switch Persona View
             </DropdownMenuLabel>
             <DropdownMenuItem
               onClick={() => handleSwitchRole("citizen")}
-              className={`cursor-pointer text-xs ${role === "citizen" ? "bg-emerald-50 text-emerald-800 font-semibold" : ""}`}
+              className={`cursor-pointer text-xs ${!isAdminView && !isOfficerView ? "bg-emerald-50 text-emerald-800 font-semibold" : ""}`}
             >
               <User className="w-3.5 h-3.5 mr-2 text-emerald-600" />
               Citizen View
-              {role === "citizen" && <Check className="w-3.5 h-3.5 ml-auto text-emerald-600" />}
+              {!isAdminView && !isOfficerView && <Check className="w-3.5 h-3.5 ml-auto text-emerald-600" />}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => handleSwitchRole("officer")}
-              className={`cursor-pointer text-xs ${role === "officer" ? "bg-sky-50 text-sky-800 font-semibold" : ""}`}
+              className={`cursor-pointer text-xs ${isOfficerView ? "bg-sky-50 text-sky-800 font-semibold" : ""}`}
             >
               <HardHat className="w-3.5 h-3.5 mr-2 text-sky-600" />
               Field Officer View
-              {role === "officer" && <Check className="w-3.5 h-3.5 ml-auto text-sky-600" />}
+              {isOfficerView && <Check className="w-3.5 h-3.5 ml-auto text-sky-600" />}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => handleSwitchRole("admin")}
-              className={`cursor-pointer text-xs ${role === "admin" ? "bg-purple-50 text-purple-800 font-semibold" : ""}`}
+              className={`cursor-pointer text-xs ${isAdminView ? "bg-purple-50 text-purple-800 font-semibold" : ""}`}
             >
               <Shield className="w-3.5 h-3.5 mr-2 text-purple-600" />
               Municipal Admin View
-              {role === "admin" && <Check className="w-3.5 h-3.5 ml-auto text-purple-600" />}
+              {isAdminView && <Check className="w-3.5 h-3.5 ml-auto text-purple-600" />}
             </DropdownMenuItem>
 
             <DropdownMenuSeparator />

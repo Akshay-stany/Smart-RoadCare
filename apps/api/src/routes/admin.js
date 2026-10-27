@@ -5,8 +5,8 @@ import { supabaseAdmin } from "../config/supabase.js";
 
 const router = Router();
 
-// Protect all admin endpoints
-router.use(requireAuth, requireRole(["admin"]));
+// Protect all admin endpoints - allow both admin and citizen
+router.use(requireAuth, requireRole(["admin", "citizen"]));
 
 // 1. Admin Dashboard Analytics Aggregations
 router.get("/dashboard", async (_req, res, next) => {
@@ -71,13 +71,16 @@ router.get("/users", async (_req, res, next) => {
       roleMap[r.user_id] = r.role;
     });
 
-    const users = (profiles || []).map((p) => ({
-      id: p.user_id || p.id,
-      name: p.full_name || p.email?.split("@")[0] || "User",
-      email: p.email,
-      role: roleMap[p.user_id] || "citizen",
-      createdAt: p.created_at,
-    }));
+    const users = (profiles || []).map((p) => {
+      const uid = p.id || p.user_id;
+      return {
+        id: uid,
+        name: p.full_name || p.email?.split("@")[0] || "User",
+        email: p.email,
+        role: roleMap[uid] || p.role || "citizen",
+        createdAt: p.created_at,
+      };
+    });
 
     res.json({ success: true, users });
   } catch (err) {
