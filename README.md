@@ -1,5 +1,8 @@
 # RoadCare — Civic Infrastructure Issue Reporting & AI Maintenance Platform
 
+> 🚀 **Live Production App**: [https://smart-roadcare.vercel.app](https://smart-roadcare.vercel.app)  
+> [![Vercel Deployment](https://img.shields.io/badge/Vercel-Live%20Deployment-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://smart-roadcare.vercel.app)
+
 RoadCare is a civic infrastructure issue reporting, AI-assisted road defect detection, and municipal maintenance workflow platform. Citizens report potholes, road cracks, broken footpaths, and street hazards with photo evidence and GPS coordinates; municipal administrators triage and assign tasks; field maintenance officers perform repairs, upload before/after completion evidence, and resolve civic complaints.
 
 The application reproduces the design system and workflows shown in `docs/reference/roadcare-dashboard-reference.png`.
@@ -97,7 +100,10 @@ npm run dev:ai
 
 ## Vercel Deployment Guide
 
-RoadCare is optimized for direct, one-click or Git-connected deployment on **Vercel**.
+RoadCare is deployed on **Vercel** and automatically deploys on every push to the `main` branch.
+
+- **Live URL**: [https://smart-roadcare.vercel.app](https://smart-roadcare.vercel.app)
+- **Deployment Platform**: Vercel (Production)
 
 ### 1. Vercel Project Settings
 When importing your repository in Vercel:
