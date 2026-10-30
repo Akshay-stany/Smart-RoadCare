@@ -1,5 +1,7 @@
 # RoadCare — Civic Infrastructure Issue Reporting & AI Maintenance Platform
 
+**Co-authored by:** [Akshay](https://github.com/Akshay-Stany) & [Sooraj K S](https://github.com/soorajsoorajKS)
+
 > 🚀 **Live Production App**: [https://smart-roadcare.vercel.app](https://smart-roadcare.vercel.app)  
 > [![Vercel Deployment](https://img.shields.io/badge/Vercel-Live%20Deployment-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://smart-roadcare.vercel.app)
 
